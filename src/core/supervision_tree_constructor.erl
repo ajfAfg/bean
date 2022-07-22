@@ -1,6 +1,3 @@
-% TODO:
-% In the future, only information to configure supervisors will be generated
-% so that both Erlang and Elixir can be supported.
 -module(supervision_tree_constructor).
 
 -export([construct/1]).

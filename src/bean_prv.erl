@@ -2,6 +2,9 @@
 
 -export([init/1, do/1, format_error/1]).
 
+-ignore_xref([{?MODULE, do, 1}]).
+-ignore_xref([{?MODULE, format_error, 1}]).
+
 -define(PROVIDER, bean).
 -define(DEPS, [app_discovery]).
 
@@ -22,7 +25,9 @@ init(State) ->
                           {desc, "A rebar plugin"}]),
     {ok, rebar_state:add_provider(State, Provider)}.
 
--spec do(rebar_state:t()) -> {ok, rebar_state:t()} | {error, string()}.
+% TODO: handle errors
+% -spec do(rebar_state:t()) -> {ok, rebar_state:t()} | {error, string()}.
+-spec do(rebar_state:t()) -> {ok, rebar_state:t()}.
 do(State) ->
     lists:foreach(fun generate_supervisor/1, rebar_state:project_apps(State)),
     {ok, State}.
