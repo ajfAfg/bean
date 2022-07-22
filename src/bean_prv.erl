@@ -24,22 +24,7 @@ init(State) ->
 
 -spec do(rebar_state:t()) -> {ok, rebar_state:t()} | {error, string()}.
 do(State) ->
-    Generate =
-        fun(_App) ->
-           Paths =
-               rebar_dir:src_dirs(
-                   dict:new(), ["src"]),
-           Modules = find_source_files(Paths),
-           CModules =
-               lists:map(fun(M) ->
-                            {ok, CModule} = dialyzer_utils:get_core_from_src(M),
-                            CModule
-                         end,
-                         Modules),
-           supervision_tree_generator:generate(CModules)
-        end,
-
-    lists:foreach(Generate, rebar_state:project_apps(State)),
+    lists:foreach(fun generate_supervisor/1, rebar_state:project_apps(State)),
     {ok, State}.
 
 -spec format_error(any()) -> iolist().
@@ -48,6 +33,33 @@ format_error(Reason) -> io_lib:format("~p", [Reason]).
 %% ===================================================================
 %% Private API
 %% ===================================================================
+generate_supervisor(_App) ->
+    Paths =
+        rebar_dir:src_dirs(
+            dict:new(), ["src"]),
+    Modules = find_source_files(Paths),
+    CModules =
+        lists:map(fun(M) ->
+                     {ok, CModule} = dialyzer_utils:get_core_from_src(M),
+                     CModule
+                  end,
+                  Modules),
+    {Name, ChildSpecs} = supervision_tree_constructor:construct(CModules),
+    Format =
+        "-module(~s).~n"
+        "-behavior(supervisor).~n"
+        "-export([start_link/0]).~n"
+        "-export([init/1]).~n"
+        "~n"
+        "start_link() -> supervisor:start_link(~s, []).~n"
+        "init(_Args) ->"
+        "SupFlags = #{},"
+        "ChildSpecs = ~p,"
+        "{ok, {SupFlags, ChildSpecs}}.~n",
+    SupStr = io_lib:format(Format, [Name, Name, ChildSpecs]),
+    file:write_file(
+        io_lib:format("src/~s.erl", [Name]), SupStr).
+
 find_source_files(Paths) -> find_source_files(Paths, []).
 
 find_source_files([], Files) -> Files;
