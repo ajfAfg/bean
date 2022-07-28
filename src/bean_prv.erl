@@ -1,9 +1,8 @@
 -module(bean_prv).
 
--export([init/1, do/1, format_error/1]).
+-behaviour(provider).
 
--ignore_xref([{?MODULE, do, 1}]).
--ignore_xref([{?MODULE, format_error, 1}]).
+-export([init/1, do/1, format_error/1]).
 
 -define(PROVIDER, bean).
 -define(DEPS, [app_discovery]).
