@@ -11,7 +11,8 @@ permissions:
 
 jobs:
   build:
-    runs-on: macos-latest
+    # NOTE: Run on Ubuntu of Docker in my computer
+    runs-on: ubuntu-22.04
 
     container:
       image: erlang:25.0.3
