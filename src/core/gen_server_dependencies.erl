@@ -73,10 +73,6 @@ extract_dependencies_from_fun_body({c_call, _, Module, Name, Args}, Acc) ->
                [{c_literal, _, GenServerName} | _]) ->
                   {some, GenServerName};
               ({c_literal, _, gen_server},
-               {c_literal, _, call},
-               [{c_literal, _, GenServerName} | _]) ->
-                  {some, GenServerName};
-              ({c_literal, _, gen_server},
                {c_literal, _, cast},
                [{c_literal, _, GenServerName} | _]) ->
                   {some, GenServerName};
