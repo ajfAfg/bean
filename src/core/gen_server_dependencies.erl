@@ -12,7 +12,9 @@
 -record(fun_signature, {name :: atom(), arity :: non_neg_integer()}).
 -record(fun_def, {fun_signature :: #fun_signature{}, body :: cerl:cerl()}).
 
--spec extract_dependencies([cerl:c_module()]) -> #{atom() => [atom()]}.
+-type dependencies() :: #{atom() => [atom()]}.
+
+-spec extract_dependencies([cerl:c_module()]) -> dependencies().
 extract_dependencies([]) -> #{};
 extract_dependencies([CModule | CModules]) ->
     Dependency =
