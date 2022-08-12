@@ -1,8 +1,8 @@
 -module(c_modules).
 
--export([gen_server/0, foo/0]).
+-compile(export_all).
 
-gen_server() ->
+fib_server() ->
     {c_module,
      [],
      {c_literal, [], fib_server},
