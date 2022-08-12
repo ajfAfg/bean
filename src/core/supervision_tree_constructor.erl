@@ -4,28 +4,20 @@
 
 -spec construct([cerl:c_module()]) -> {atom(), [supervisor:child_spec()]}.
 construct(CModules) ->
-    Names = get_genserver_module_names(CModules),
+    Names = get_gen_server_module_names(CModules),
     ChildSpecs = lists:map(fun construct_child_spec/1, Names),
     construct_supervisor(ChildSpecs).
 
-get_genserver_module_names([]) -> [];
-get_genserver_module_names([CModule | Rest]) ->
-    case is_genserver(CModule) of
-        true ->
-            [cerl:atom_val(
-                 cerl:module_name(CModule))
-             | get_genserver_module_names(Rest)];
-        false -> get_genserver_module_names(Rest)
-    end.
-
-% TODO: Support all behaviors in the future
-is_genserver(CModule) ->
-    Attrs = cerl:module_attrs(CModule),
-    Fun = fun({CLiteral1, CLiteral2}) ->
-             cerl:atom_val(CLiteral1) =:= behaviour
-             andalso lists:member(gen_server, my_cerl:list_val(CLiteral2))
-          end,
-    lists:any(Fun, Attrs).
+get_gen_server_module_names(CModules) ->
+    F = fun(CModule) ->
+           case c_gen_server:is_gen_server(CModule) of
+               true ->
+                   cerl:atom_val(
+                       cerl:module_name(CModule));
+               false -> nil
+           end
+        end,
+    lists:filter(fun(E) -> E =/= nil end, lists:map(F, CModules)).
 
 construct_child_spec(ModuleName) ->
     #{id => ModuleName, start => {ModuleName, start_link, []}}.
