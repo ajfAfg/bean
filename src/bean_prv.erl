@@ -38,36 +38,35 @@ format_error(Reason) -> io_lib:format("~p", [Reason]).
 %% Private API
 %% ===================================================================
 generate_supervisor(_App) ->
-    Paths =
-        rebar_dir:src_dirs(
-            dict:new(), ["src"]),
-    Modules = find_source_files(Paths),
+    Modules = find_source_files("src"),
     CModules =
         lists:map(fun(M) ->
                      {ok, CModule} = dialyzer_utils:get_core_from_src(M),
                      CModule
                   end,
                   Modules),
-    {Name, ChildSpecs} = supervision_tree_constructor:construct(CModules),
+    SupSpecs = supervision_tree_constructor:construct(CModules),
     Format =
-        "-module(~s).~n"
+        "-module('~s').~n"
         "-behavior(supervisor).~n"
         "-export([start_link/0]).~n"
         "-export([init/1]).~n"
         "~n"
-        "start_link() -> supervisor:start_link(~s, []).~n"
+        "start_link() -> supervisor:start_link('~s', []).~n"
         "init(_Args) ->"
-        "SupFlags = #{},"
+        "SupFlags = ~p,"
         "ChildSpecs = ~p,"
         "{ok, {SupFlags, ChildSpecs}}.~n",
-    SupStr = io_lib:format(Format, [Name, Name, ChildSpecs]),
-    file:write_file(
-        io_lib:format("src/~s.erl", [Name]), SupStr).
+    SupStrsWithName =
+        lists:map(fun({sup_spec, Name, SupFlags, ChildSpecs}) ->
+                     {Name, io_lib:format(Format, [Name, Name, SupFlags, ChildSpecs])}
+                  end,
+                  SupSpecs),
+    lists:foreach(fun({Name, SupStr}) ->
+                     file:write_file(
+                         io_lib:format("src/~s.erl", [Name]), SupStr)
+                  end,
+                  SupStrsWithName).
 
-find_source_files(Paths) -> find_source_files(Paths, []).
-
-find_source_files([], Files) -> Files;
-find_source_files([Path | Rest], Files) ->
-    find_source_files(Rest,
-                      [filename:join(Path, Mod) || Mod <- filelib:wildcard("*.erl", Path)]
-                      ++ Files).
+find_source_files(Dir) ->
+    filelib:fold_files(Dir, ".*\.erl", true, fun(X, Acc) -> [X | Acc] end, []).
