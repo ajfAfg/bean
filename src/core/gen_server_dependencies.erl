@@ -6,10 +6,7 @@
 
 -export([extract_dependencies/1, group/1]).
 
--export_type([dependencies/0]).
-
-% TODO: Ignore temporarily to allow CI to pass
--ignore_xref([{?MODULE, extract_dependencies, 1}]).
+-export_type([dependencies/0, grouped_dependencies/0]).
 
 -type dependencies() :: #{atom() => [atom()]}.
 
