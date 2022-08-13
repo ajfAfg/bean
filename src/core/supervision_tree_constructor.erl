@@ -2,24 +2,57 @@
 
 -export([construct/1]).
 
--spec construct([cerl:c_module()]) -> {atom(), [supervisor:child_spec()]}.
+-export_type([sup_spec/0]).
+
+-record(sup_spec,
+        {name :: atom(),
+         sup_flags :: supervisor:sup_flags(),
+         child_specs :: [supervisor:child_spec()]}).
+
+-type sup_spec() :: #sup_spec{}.
+
+-spec construct([cerl:c_module()]) -> [sup_spec()].
 construct(CModules) ->
-    Names = get_gen_server_module_names(CModules),
-    ChildSpecs = lists:map(fun construct_child_spec/1, Names),
-    construct_supervisor(ChildSpecs).
+    GroupedDependencies =
+        gen_server_dependencies:group(
+            gen_server_dependencies:extract_dependencies(CModules)),
+    convert_sup_specs_from_grouped_dependencies(GroupedDependencies,
+                                                create_sup_names(GroupedDependencies),
+                                                []).
 
-get_gen_server_module_names(CModules) ->
-    F = fun(CModule) ->
-           case c_gen_server:is_gen_server(CModule) of
-               true ->
-                   cerl:atom_val(
-                       cerl:module_name(CModule));
-               false -> nil
-           end
-        end,
-    lists:filter(fun(E) -> E =/= nil end, lists:map(F, CModules)).
+-spec
+    convert_sup_specs_from_grouped_dependencies(gen_server_dependencies:grouped_dependencies(),
+                                                sup_names(),
+                                                [sup_spec()]) ->
+                                                   [sup_spec()].
+convert_sup_specs_from_grouped_dependencies(GenServer, _, Acc) when is_atom(GenServer) ->
+    Acc;
+convert_sup_specs_from_grouped_dependencies({Strategy, Deps2} = Deps1, Names, Acc) ->
+    SupSpec =
+        #sup_spec{name = maps:get(Deps1, Names),
+                  sup_flags = #{strategy => Strategy},
+                  child_specs = lists:map(fun(Dep) -> create_child_spec(Dep, Names) end, Deps2)},
+    lists:foldl(fun(Dep, A) -> convert_sup_specs_from_grouped_dependencies(Dep, Names, A) end,
+                [SupSpec | Acc],
+                Deps2).
 
-construct_child_spec(ModuleName) ->
-    #{id => ModuleName, start => {ModuleName, start_link, []}}.
+-type sup_names() :: #{gen_server_dependencies:grouped_dependencies() => atom()}.
 
-construct_supervisor(ChildSpecs) -> {bean_sup, ChildSpecs}.
+-spec create_sup_names(gen_server_dependencies:grouped_dependencies()) -> sup_names().
+create_sup_names(GenServer) when is_atom(GenServer) -> #{};
+create_sup_names({_, Deps2} = Deps1) ->
+    lists:foldl(fun maps:merge/2,
+                #{Deps1 => make_name()},
+                lists:map(fun create_sup_names/1, Deps2)).
+
+-spec make_name() -> atom().
+make_name() ->
+    erlang:list_to_atom(
+        erlang:ref_to_list(make_ref())).
+
+-spec create_child_spec(gen_server_dependencies:grouped_dependencies() | atom(),
+                        sup_names()) ->
+                           supervisor:child_spec().
+create_child_spec(GenServer, _) when is_atom(GenServer) ->
+    #{id => GenServer, type => worker};
+create_child_spec(Dep, Names) -> #{id => maps:get(Dep, Names), type => supervisor}.
