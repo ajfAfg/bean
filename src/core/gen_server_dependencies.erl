@@ -145,7 +145,10 @@ group(Dependencies) ->
     Graph = new_digraph_from_dependencies(Dependencies),
     group_cyclic_strongly_connected_components(Graph),
     keep_grouping_until_vertices_num_reaches_one(Graph),
-    hd(digraph:vertices(Graph)).
+    case digraph:no_vertices(Graph) of
+        1 -> hd(digraph:vertices(Graph));
+        _ -> {one_for_one, digraph:vertices(Graph)}
+    end.
 
 -spec new_digraph_from_dependencies(dependencies()) -> digraph:graph().
 new_digraph_from_dependencies(Dependencies) ->
@@ -157,8 +160,8 @@ new_digraph_from_dependencies(Dependencies) ->
 
 -spec keep_grouping_until_vertices_num_reaches_one(digraph:graph()) -> ok.
 keep_grouping_until_vertices_num_reaches_one(Graph) ->
-    case digraph:no_vertices(Graph) of
-        1 -> ok;
+    case digraph:no_edges(Graph) of
+        0 -> ok;
         _ ->
             group_longest_straight_path(Graph),
             group_many_neighbours(Graph),
