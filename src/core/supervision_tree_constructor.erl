@@ -54,5 +54,11 @@ make_name() ->
                         sup_names()) ->
                            supervisor:child_spec().
 create_child_spec(GenServer, _) when is_atom(GenServer) ->
-    #{id => GenServer, type => worker};
-create_child_spec(Dep, Names) -> #{id => maps:get(Dep, Names), type => supervisor}.
+    #{id => GenServer,
+      start => {gen_server, start_link, [{local, GenServer}, GenServer, [], []]},
+      type => worker};
+create_child_spec(Dep, Names) ->
+    Name = maps:get(Dep, Names),
+    #{id => Name,
+      start => {supervisor, start_link, [Name, []]},
+      type => supervisor}.
