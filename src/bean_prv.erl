@@ -62,9 +62,11 @@ generate_supervisor(_App) ->
                      {Name, io_lib:format(Format, [Name, Name, SupFlags, ChildSpecs])}
                   end,
                   SupSpecs),
+    file:make_dir("src/"),
+    file:make_dir("src/bean/"),
     lists:foreach(fun({Name, SupStr}) ->
                      file:write_file(
-                         io_lib:format("src/~s.erl", [Name]), SupStr)
+                         io_lib:format("src/bean/~s.erl", [Name]), SupStr)
                   end,
                   SupStrsWithName).
 
