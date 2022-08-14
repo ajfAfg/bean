@@ -49,17 +49,15 @@ generate_supervisor(_App) ->
     Format =
         "-module('~s').~n"
         "-behavior(supervisor).~n"
-        "-export([start_link/0]).~n"
         "-export([init/1]).~n"
         "~n"
-        "start_link() -> supervisor:start_link('~s', []).~n"
         "init(_Args) ->"
         "SupFlags = ~p,"
         "ChildSpecs = ~p,"
         "{ok, {SupFlags, ChildSpecs}}.~n",
     SupStrsWithName =
         lists:map(fun({sup_spec, Name, SupFlags, ChildSpecs}) ->
-                     {Name, io_lib:format(Format, [Name, Name, SupFlags, ChildSpecs])}
+                     {Name, io_lib:format(Format, [Name, SupFlags, ChildSpecs])}
                   end,
                   SupSpecs),
     file:make_dir("src/"),
