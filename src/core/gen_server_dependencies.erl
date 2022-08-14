@@ -143,11 +143,15 @@ extract_dependencies_from_fun_body(_, Acc) -> Acc.
 -spec group(dependencies()) -> grouped_dependencies().
 group(Dependencies) ->
     Graph = new_digraph_from_dependencies(Dependencies),
-    group_cyclic_strongly_connected_components(Graph),
-    keep_grouping_until_vertices_num_reaches_one(Graph),
     case digraph:no_vertices(Graph) of
-        1 -> hd(digraph:vertices(Graph));
-        _ -> {one_for_one, digraph:vertices(Graph)}
+        1 -> {one_for_one, digraph:vertices(Graph)};
+        _ ->
+            group_cyclic_strongly_connected_components(Graph),
+            keep_grouping_until_vertices_num_reaches_one(Graph),
+            case digraph:no_vertices(Graph) of
+                1 -> hd(digraph:vertices(Graph));
+                _ -> {one_for_one, digraph:vertices(Graph)}
+            end
     end.
 
 -spec new_digraph_from_dependencies(dependencies()) -> digraph:graph().
