@@ -125,6 +125,28 @@ group_test_() ->
                        lists:sort(
                            digraph:vertices(GroupedGraph))),
           ?assertEqual([], ExtractEdges(GroupedGraph))
+       end},
+      {"Label cyclic strongly connected components as `cyclic_strong_component`",
+       fun() ->
+          ?assertMatch({_, cyclic_strong_component},
+                       digraph:vertex(
+                           optimum_supervision_tree_solver:group(
+                               my_digraph:create([1, 2], [{1, 2}, {2, 1}])),
+                           [1, 2])),
+          ?assertMatch({_, cyclic_strong_component},
+                       digraph:vertex(
+                           optimum_supervision_tree_solver:group(
+                               my_digraph:create([1, 2, 3, 4],
+                                                 [{1, 2}, {2, 3}, {2, 4}, {3, 1}, {4, 1}])),
+                           [1, 2, 3, 4]))
+       end},
+      {"Does not label singletons as `cyclic_strong_component`",
+       fun() ->
+          GroupedGraph =
+              optimum_supervision_tree_solver:group(
+                  my_digraph:create([1, 2], [])),
+          ?assertNotMatch({[1], cyclic_strong_component}, digraph:vertex(GroupedGraph, [1])),
+          ?assertNotMatch({[2], cyclic_strong_component}, digraph:vertex(GroupedGraph, [2]))
        end}]}.
 
 sort_by_postorder_test_() ->

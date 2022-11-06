@@ -34,7 +34,15 @@ group(Graph, GroupedGraph, Targets, GroupedParents) ->
                                             Targets)
                             end,
                             Components)),
-    lists:foreach(fun(GroupedVertices) -> digraph:add_vertex(GroupedGraph, GroupedVertices)
+    lists:foreach(fun(GroupedVertices) ->
+                     Label =
+                         case my_digraph_utils:get_cyclic_strong_connected_component(Graph,
+                                                                                     hd(GroupedVertices))
+                         of
+                             false -> [];
+                             _ -> cyclic_strong_component
+                         end,
+                     digraph:add_vertex(GroupedGraph, GroupedVertices, Label)
                   end,
                   GroupedTargets),
     lists:foreach(fun(GroupedVertices) ->
