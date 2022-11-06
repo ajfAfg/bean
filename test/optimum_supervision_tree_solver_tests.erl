@@ -86,6 +86,26 @@ group_test_() ->
                            digraph:vertices(GroupedGraph))),
           ?assertEqual(lists:sort([{[1], [2, 3, 4]}, {[2, 3, 4], [5]}]), ExtractEdges(GroupedGraph))
        end},
+      {"Can group a graph having circles in first and last",
+       fun() ->
+          GroupedGraph =
+              optimum_supervision_tree_solver:group(
+                  my_digraph:create(
+                      lists:seq(1, 6), [{1, 2}, {2, 3}, {3, 1}, {3, 4}, {4, 5}, {5, 6}, {6, 5}])),
+          ?assertEqual(lists:sort([[1, 2, 3], [4], [5, 6]]),
+                       lists:sort(
+                           digraph:vertices(GroupedGraph))),
+          ?assertEqual(lists:sort([{[1, 2, 3], [4]}, {[4], [5, 6]}]),
+                       lists:sort(ExtractEdges(GroupedGraph)))
+       end},
+      {"Can group a graph having strongly connected components",
+       fun() ->
+          GroupedGraph =
+              optimum_supervision_tree_solver:group(
+                  my_digraph:create([1, 2, 3, 4], [{1, 2}, {2, 3}, {2, 4}, {3, 1}, {4, 1}])),
+          ?assertEqual([[1, 2, 3, 4]], digraph:vertices(GroupedGraph)),
+          ?assertEqual([], ExtractEdges(GroupedGraph))
+       end},
       {"Can group a complex graph",
        fun() ->
           G = my_digraph:create(

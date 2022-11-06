@@ -5,7 +5,20 @@
 group(Graph) ->
     GroupedGraph = digraph:new(),
     Targets =
-        lists:filter(fun(V) -> digraph:out_degree(Graph, V) =:= 0 end, digraph:vertices(Graph)),
+        lists:filter(fun(V) ->
+                        GetStrongConnectedComponent =
+                            fun() ->
+                               case my_digraph_utils:get_strong_connected_component(Graph, V) of
+                                   false -> [];
+                                   Vertices -> Vertices
+                               end
+                            end,
+                        lists:uniq(
+                            lists:sort(GetStrongConnectedComponent()))
+                        =:= lists:sort(
+                                digraph_utils:reachable([V], Graph))
+                     end,
+                     digraph:vertices(Graph)),
     group(Graph, GroupedGraph, Targets, []).
 
 -spec group(digraph:graph(), digraph:graph(), [digraph:vertex()], [digraph:vertex()]) ->
