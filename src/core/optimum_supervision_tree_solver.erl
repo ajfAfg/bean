@@ -8,7 +8,7 @@ group(Graph) ->
         lists:filter(fun(V) ->
                         GetStrongConnectedComponent =
                             fun() ->
-                               case my_digraph_utils:get_strong_connected_component(Graph, V) of
+                               case my_digraph_utils:get_strong_component(Graph, V) of
                                    false -> [];
                                    Vertices -> Vertices
                                end
@@ -36,7 +36,7 @@ group(Graph, GroupedGraph, Targets, GroupedParents) ->
                             Components)),
     lists:foreach(fun(GroupedVertices) ->
                      Label =
-                         case my_digraph_utils:get_cyclic_strong_connected_component(Graph,
+                         case my_digraph_utils:get_cyclic_strong_component(Graph,
                                                                                      hd(GroupedVertices))
                          of
                              false -> [];
