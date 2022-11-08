@@ -1,6 +1,26 @@
 -module(optimum_supervision_tree_solver).
 
--export([group/1, sort_by_postorder/2, transform_into_optimum_supervision_tree/1]).
+-export([solve/1, group/1, sort_by_postorder/2,
+         transform_into_optimum_supervision_tree/1]).
+
+-export_type([supervision_tree/0]).
+
+-type supervision_tree() :: {supervisor:strategy(), [supervision_tree() | atom()]}.
+
+-spec solve(gen_server_dependencies:dependencies()) -> supervision_tree().
+solve(Dependencies) ->
+    Graph =
+        begin
+            Vertices = maps:keys(Dependencies),
+            Edges =
+                lists:flatten(
+                    lists:map(fun(From) ->
+                                 lists:map(fun(To) -> {From, To} end, maps:get(From, Dependencies))
+                              end,
+                              maps:keys(Dependencies))),
+            my_digraph:create(Vertices, Edges)
+        end,
+    transform_into_optimum_supervision_tree(group(Graph)).
 
 group(Graph) ->
     GroupedGraph = digraph:new(),

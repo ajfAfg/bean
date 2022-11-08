@@ -2,6 +2,15 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
+% NOTE:
+% Only test for types,
+% since `group/1` and `transform_into_optimum_supervision_tree/1` tests are enriched.
+solve_test_() ->
+    {inparallel,
+     [{"Can run if the input type matches",
+       ?_assertEqual({rest_for_one, [g1, g2]},
+                     optimum_supervision_tree_solver:solve(#{g1 => [g2], g2 => []}))}]}.
+
 % TODO: Use helper functions to reduce the amount of code.
 group_test_() ->
     ExtractEdges =
