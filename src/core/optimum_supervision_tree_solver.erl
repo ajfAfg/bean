@@ -89,12 +89,14 @@ group(Graph, GroupedGraph, Targets, GroupedParents) ->
                   end,
                   GroupedTargets),
     NewTargets =
+        % NOTE:
+        % There may be unvisited behaviors that are not children of `Targets`
+        % but on which the children of `Targets` depend.
         digraph_utils:reachable(
             lists:flatten(
                 lists:map(fun(V) -> digraph:in_neighbours(Graph, V) end, Targets)),
-            Graph)
-        -- lists:flatten(
-               digraph:vertices(GroupedGraph)),
+            SubGraph)
+        -- Targets,
     group(Graph, GroupedGraph, NewTargets, GroupedTargets).
 
 -spec sort_by_postorder([digraph:vertex()], digraph:graph()) -> [digraph:vertex()].
