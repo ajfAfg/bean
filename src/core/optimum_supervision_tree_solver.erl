@@ -48,7 +48,10 @@ group(Graph, GroupedGraph, Targets, GroupedParents) ->
     SubGraph = digraph_utils:subgraph(Graph, digraph_utils:reaching(Targets, Graph)),
     Components = digraph_utils:components(SubGraph),
     GroupedTargets =
-        lists:map(fun(Target) -> sort_by_postorder(Target, Graph) end,
+        lists:map(fun(Target) ->
+                     % NOTE: Behaviors in the same group may have dependencies.
+                     sort_by_postorder(Target, Graph)
+                  end,
                   lists:map(fun(Component) ->
                                lists:filter(fun(Target) -> lists:member(Target, Component) end,
                                             Targets)
