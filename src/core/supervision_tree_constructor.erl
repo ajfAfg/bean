@@ -14,7 +14,7 @@
 -spec construct([cerl:c_module()]) -> [sup_spec()].
 construct(CModules) ->
     GroupedDependencies =
-        gen_server_dependencies:group(
+        optimum_supervision_tree_solver:solve(
             gen_server_dependencies:extract_dependencies(CModules)),
     convert_sup_specs_from_grouped_dependencies(GroupedDependencies,
                                                 create_sup_names(GroupedDependencies),
