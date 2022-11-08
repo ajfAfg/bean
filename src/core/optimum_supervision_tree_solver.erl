@@ -1,6 +1,6 @@
 -module(optimum_supervision_tree_solver).
 
--export([group/1, sort_by_postorder/2]).
+-export([group/1, sort_by_postorder/2, transform_into_optimum_supervision_tree/1]).
 
 group(Graph) ->
     GroupedGraph = digraph:new(),
@@ -37,7 +37,7 @@ group(Graph, GroupedGraph, Targets, GroupedParents) ->
     lists:foreach(fun(GroupedVertices) ->
                      Label =
                          case my_digraph_utils:get_cyclic_strong_component(Graph,
-                                                                                     hd(GroupedVertices))
+                                                                           hd(GroupedVertices))
                          of
                              false -> [];
                              _ -> cyclic_strong_component
@@ -83,3 +83,38 @@ sort_by_postorder(Vertices, Graph) ->
         lists:reverse(
             digraph_utils:postorder(Graph)),
     lists:filter(fun(V) -> lists:member(V, Vertices) end, RevPostOrderVertices).
+
+% TODO: Not "optimal" yet.
+transform_into_optimum_supervision_tree(GroupedGraph) ->
+    case lists:filter(fun(V) -> digraph:out_degree(GroupedGraph, V) =:= 0 end,
+                      digraph:vertices(GroupedGraph))
+    of
+        [] -> throw(impossible);
+        [GroupedVertex] -> transform_into_optimum_supervision_tree(GroupedGraph, GroupedVertex);
+        GroupedVertices ->
+            {one_for_one,
+             lists:map(fun(GroupedVertex) ->
+                          transform_into_optimum_supervision_tree(GroupedGraph, GroupedVertex)
+                       end,
+                       GroupedVertices)}
+    end.
+
+transform_into_optimum_supervision_tree(GroupedGraph, GroupedVertex) ->
+    LeftChild =
+        case digraph:in_neighbours(GroupedGraph, GroupedVertex) of
+            [] -> nil;
+            [V] -> transform_into_optimum_supervision_tree(GroupedGraph, V);
+            Vs ->
+                {one_for_one,
+                 lists:map(fun(V) -> transform_into_optimum_supervision_tree(GroupedGraph, V) end,
+                           Vs)}
+        end,
+    Strategy =
+        case digraph:vertex(GroupedGraph, GroupedVertex) of
+            {GroupedVertex, cyclic_strong_component} -> one_for_all;
+            {GroupedVertex, []} -> rest_for_one
+        end,
+    case LeftChild of
+        nil -> {Strategy, GroupedVertex};
+        _ -> {Strategy, [LeftChild] ++ GroupedVertex}
+    end.

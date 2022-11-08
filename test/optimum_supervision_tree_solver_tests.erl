@@ -172,3 +172,20 @@ sort_by_postorder_test_() ->
                        optimum_supervision_tree_solver:sort_by_postorder(
                            lists:seq(1, 5), G))
        end}]}.
+
+transform_into_optimum_supervision_tree_test_() ->
+    {inparallel,
+     [{"foo",
+       fun() ->
+          GroupedGraph =
+              my_digraph:create([[1], [2], [3], [4]], [{[1], [4]}, {[2], [4]}, {[3], [4]}]),
+          ?assertEqual({rest_for_one, [{one_for_one, [1, 2, 3]}, 4]},
+                       optimum_supervision_tree_solver:transform_into_optimum_supervision_tree(GroupedGraph))
+       end},
+      {"bar",
+       fun() ->
+          GroupedGraph = my_digraph:create([[1, 2, 3]], []),
+          digraph:add_vertex(GroupedGraph, [1, 2, 3], cyclic_strong_component),
+          ?assertEqual({one_for_all, [1, 2, 3]},
+                       optimum_supervision_tree_solver:transform_into_optimum_supervision_tree(GroupedGraph))
+       end}]}.
