@@ -2,56 +2,34 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
+% NOTE:
+% Extracting dependencies from `gen_server` is tested in `gen_server_dependencies_tests.erl`,
+% and generating the supervision tree from the dependencies is tested in `optimum_supervision_tree_solver_tests`.
+% Therefore, it is sufficient to this test only for type consistency.
 construct_test_() ->
     {inparallel,
-     [{"Supervise with `rest_for_one`",
-       ?_assertMatch([{sup_spec,
-                       _, % Name
-                       #{strategy := rest_for_one},
-                       [#{id := first_server,
-                          start :=
-                              {gen_server,
-                               start_link,
-                               [{local, first_server}, first_server, [], []]},
-                          type := worker},
-                        #{id := second_server,
-                          start :=
-                              {gen_server,
-                               start_link,
-                               [{local, second_server}, second_server, [], []]},
-                          type := worker},
-                        #{id := third_server,
-                          start :=
-                              {gen_server,
-                               start_link,
-                               [{local, third_server}, third_server, [], []]},
-                          type := worker}]}],
-                     supervision_tree_constructor:construct([c_modules:first_server(),
-                                                             c_modules:second_server(),
-                                                             c_modules:third_server()]))},
-      {"Supervise dependency-free `gen_server`s with `one_for_one`",
-       ?_assertMatch([{sup_spec,
-                       _, % Name
-                       #{strategy := one_for_one},
-                       [#{id := third_server,
-                          start :=
-                              {gen_server,
-                               start_link,
-                               [{local, third_server}, third_server, [], []]},
-                          type := worker},
-                        #{id := fib_server,
-                          start :=
-                              {gen_server, start_link, [{local, fib_server}, fib_server, [], []]},
-                          type := worker}]}],
-                     supervision_tree_constructor:construct([c_modules:fib_server(),
-                                                             c_modules:third_server()]))},
-      {"Ignore modules other than `gen_server`",
-       ?_assertMatch([{sup_spec,
-                       _,
-                       #{strategy := one_for_one},
-                       [#{id := fib_server,
-                          start :=
-                              {gen_server, start_link, [{local, fib_server}, fib_server, [], []]},
-                          type := worker}]}],
-                     supervision_tree_constructor:construct([c_modules:fib_server(),
-                                                             c_modules:foo()]))}]}.
+     [{"The Return value type matches the `sup_spec` type",
+       fun() ->
+          SupSpecs =
+              supervision_tree_constructor:construct([c_modules:first_server(),
+                                                      c_modules:second_server(),
+                                                      c_modules:third_server()]),
+          lists:foreach(fun(SupSpec) ->
+                           ?assertMatch({sup_spec, Name, #{strategy := _}, [_ | _]} when is_atom(Name), SupSpec)
+                        end,
+                        SupSpecs)
+       end},
+      {"The Children in the return value matches the `supervisor:child_spec` type",
+       fun() ->
+          [{_, _, _, Children} | _] =
+              supervision_tree_constructor:construct([c_modules:first_server(),
+                                                      c_modules:second_server(),
+                                                      c_modules:third_server()]),
+          lists:foreach(fun(Child) ->
+                           ?assertMatch(#{id := _,
+                                          start := _,
+                                          type := _},
+                                        Child)
+                        end,
+                        Children)
+       end}]}.
