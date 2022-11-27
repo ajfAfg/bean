@@ -11,6 +11,11 @@
 -type grouped_graph() :: digraph:graph().
 -type grouped_graph_vertex() :: [atom()].
 
+% TODO: Prevent the error from occurring in the first place in some way.
+-ignore_xref(group/1).
+-ignore_xref(sort_by_postorder/2).
+-ignore_xref(transform_into_optimum_supervision_tree/1).
+
 -spec solve(gen_server_dependencies:dependencies()) -> supervision_tree().
 solve(Dependencies) ->
     Graph =
