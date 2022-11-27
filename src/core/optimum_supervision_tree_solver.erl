@@ -6,6 +6,10 @@
 -export_type([supervision_tree/0]).
 
 -type supervision_tree() :: {supervisor:strategy(), [supervision_tree() | atom()]}.
+-type dependency_graph() :: digraph:graph().
+-type dependency_graph_vertex() :: atom().
+-type grouped_graph() :: digraph:graph().
+-type grouped_graph_vertex() :: [atom()].
 
 -spec solve(gen_server_dependencies:dependencies()) -> supervision_tree().
 solve(Dependencies) ->
@@ -22,6 +26,7 @@ solve(Dependencies) ->
         end,
     transform_into_optimum_supervision_tree(group(Graph)).
 
+-spec group(dependency_graph()) -> grouped_graph().
 group(Graph) ->
     GroupedGraph = digraph:new(),
     Targets =
@@ -41,8 +46,11 @@ group(Graph) ->
                      digraph:vertices(Graph)),
     group(Graph, GroupedGraph, Targets, []).
 
--spec group(digraph:graph(), digraph:graph(), [digraph:vertex()], [digraph:vertex()]) ->
-               digraph:graph().
+-spec group(dependency_graph(),
+            grouped_graph(),
+            [dependency_graph_vertex()],
+            [grouped_graph_vertex()]) ->
+               grouped_graph().
 group(_, GroupedGraph, [], _) -> GroupedGraph;
 group(Graph, GroupedGraph, Targets, GroupedParents) ->
     SubGraph = digraph_utils:subgraph(Graph, digraph_utils:reaching(Targets, Graph)),
@@ -110,6 +118,7 @@ sort_by_postorder(Vertices, Graph) ->
     lists:filter(fun(V) -> lists:member(V, Vertices) end, RevPostOrderVertices).
 
 % TODO: Not "optimal" yet.
+-spec transform_into_optimum_supervision_tree(grouped_graph()) -> supervision_tree().
 transform_into_optimum_supervision_tree(GroupedGraph) ->
     case lists:filter(fun(V) -> digraph:out_degree(GroupedGraph, V) =:= 0 end,
                       digraph:vertices(GroupedGraph))
@@ -124,6 +133,8 @@ transform_into_optimum_supervision_tree(GroupedGraph) ->
                        GroupedVertices)}
     end.
 
+-spec transform_into_optimum_supervision_tree(grouped_graph(), grouped_graph_vertex()) ->
+                                                 supervision_tree().
 transform_into_optimum_supervision_tree(GroupedGraph, GroupedVertex) ->
     LeftChild =
         case digraph:in_neighbours(GroupedGraph, GroupedVertex) of
