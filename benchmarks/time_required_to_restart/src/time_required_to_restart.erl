@@ -9,8 +9,18 @@
 
 %% escript Entry point
 main(["generate-gen-server", NStr]) ->
-    list_to_integer(NStr),
-    % TODO: 実際は gen_server を自動生成する
+    {VertexNum, EdgeNum} = get_vertex_num_and_edge_num(list_to_integer(NStr)),
+    Vertices =
+        lists:map(fun erlang:list_to_atom/1,
+                  lists:map(fun erlang:integer_to_list/1, lists:seq(1, VertexNum))),
+    Graph = adjacency_list:create_randomly(Vertices, EdgeNum),
+    file:make_dir("src/"),
+    file:make_dir("src/gen_servers/"),
+    maps:foreach(fun(Name, Code) ->
+                    file:write_file(
+                        io_lib:format("src/gen_servers/~s.erl", [Name]), Code)
+                 end,
+                 maps:map(fun gen_server_generator:generate/2, Graph)),
     erlang:halt();
 main(["measure", NStr]) ->
     N = list_to_integer(NStr),
