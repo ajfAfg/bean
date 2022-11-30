@@ -43,11 +43,17 @@ convert_sup_specs_from_grouped_dependencies({Strategy, Deps2} = Deps1, Names, Ac
 -type sup_names() :: #{gen_server_dependencies:grouped_dependencies() => atom()}.
 
 -spec create_sup_names(gen_server_dependencies:grouped_dependencies()) -> sup_names().
-create_sup_names(GenServer) when is_atom(GenServer) -> #{};
 create_sup_names({_, Deps2} = Deps1) ->
+    % NOTE: The name of root in a supervision tree is `bean`.
+    lists:foldl(fun maps:merge/2,
+                #{Deps1 => bean},
+                lists:map(fun create_sup_names_aux/1, Deps2)).
+
+create_sup_names_aux(GenServer) when is_atom(GenServer) -> #{};
+create_sup_names_aux({_, Deps2} = Deps1) ->
     lists:foldl(fun maps:merge/2,
                 #{Deps1 => make_name()},
-                lists:map(fun create_sup_names/1, Deps2)).
+                lists:map(fun create_sup_names_aux/1, Deps2)).
 
 -spec make_name() -> atom().
 make_name() ->
