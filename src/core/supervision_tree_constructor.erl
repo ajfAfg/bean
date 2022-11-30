@@ -30,7 +30,11 @@ convert_sup_specs_from_grouped_dependencies(GenServer, _, Acc) when is_atom(GenS
 convert_sup_specs_from_grouped_dependencies({Strategy, Deps2} = Deps1, Names, Acc) ->
     SupSpec =
         #sup_spec{name = maps:get(Deps1, Names),
-                  sup_flags = #{strategy => Strategy},
+                  sup_flags =
+                      #{strategy => Strategy,
+                        % TODO: Give the debug information only when running the benchmark to measure the time to restart gen_servers
+                        intensity => 1000,
+                        period => 1},
                   child_specs = lists:map(fun(Dep) -> create_child_spec(Dep, Names) end, Deps2)},
     lists:foldl(fun(Dep, A) -> convert_sup_specs_from_grouped_dependencies(Dep, Names, A) end,
                 [SupSpec | Acc],
@@ -55,7 +59,9 @@ make_name() ->
                            supervisor:child_spec().
 create_child_spec(GenServer, _) when is_atom(GenServer) ->
     #{id => GenServer,
-      start => {gen_server, start_link, [{local, GenServer}, GenServer, [], []]},
+      start =>
+          % TODO: Give the debug information only when running the benchmark to measure the time to restart gen_servers
+          {gen_server, start_link, [{local, GenServer}, GenServer, [], [{debug, [statistics]}]]},
       type => worker};
 create_child_spec(Dep, Names) ->
     Name = maps:get(Dep, Names),
