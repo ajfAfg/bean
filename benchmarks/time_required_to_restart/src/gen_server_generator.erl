@@ -19,7 +19,7 @@ format() ->
     "-behaviour(gen_server).~n"
     "-export([init/1, handle_call/3, handle_cast/2, terminate/2]).~n"
     "% NOTE: Send a message to the measure process. ~n"
-    "init([]) -> io:format(?MODULE), timer:sleep(~p),measurer ! ok,{ok, #{}}.~n"
+    "init([]) -> timer:sleep(~p),measurer ! ok,{ok, #{}}.~n"
     "handle_call(Request, _From, State) ->"
     "~s"
     "{reply, first, State}.~n"
