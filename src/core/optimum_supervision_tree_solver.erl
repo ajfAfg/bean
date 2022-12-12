@@ -141,7 +141,7 @@ transform_into_optimum_supervision_tree(GroupedGraph) ->
 -spec transform_into_optimum_supervision_tree(grouped_graph(), grouped_graph_vertex()) ->
                                                  supervision_tree().
 transform_into_optimum_supervision_tree(GroupedGraph, GroupedVertex) ->
-    LeftChild =
+    RightChild =
         case digraph:in_neighbours(GroupedGraph, GroupedVertex) of
             [] -> nil;
             [V] -> transform_into_optimum_supervision_tree(GroupedGraph, V);
@@ -155,7 +155,7 @@ transform_into_optimum_supervision_tree(GroupedGraph, GroupedVertex) ->
             {GroupedVertex, cyclic_strong_component} -> one_for_all;
             {GroupedVertex, []} -> rest_for_one
         end,
-    case LeftChild of
+    case RightChild of
         nil -> {Strategy, GroupedVertex};
-        _ -> {Strategy, GroupedVertex ++ [LeftChild]}
+        _ -> {Strategy, GroupedVertex ++ [RightChild]}
     end.
