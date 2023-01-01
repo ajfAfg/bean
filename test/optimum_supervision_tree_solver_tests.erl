@@ -161,13 +161,14 @@ sort_by_postorder_test_() ->
      [{"Sort by the postorder of the vertices",
        fun() ->
           G = my_digraph:create([1, 2, 3], [{1, 2}, {2, 3}]),
-          ?assertEqual([1, 2, 3], optimum_supervision_tree_solver:sort_by_postorder([2, 3, 1], G))
+          ?assertEqual([3, 2, 1], optimum_supervision_tree_solver:sort_by_postorder([2, 3, 1], G))
        end},
-      {"Return the same result as topological sorting if the given list is a DAG",
+      {"Return the same result as reversed topological sorting if the given list is a DAG",
        fun() ->
           G = my_digraph:create(
                   lists:seq(1, 6), [{1, 3}, {1, 4}, {2, 4}, {2, 5}, {3, 6}, {4, 6}, {5, 6}]),
-          ?assertEqual(digraph_utils:topsort(G),
+          ?assertEqual(lists:reverse(
+                           digraph_utils:topsort(G)),
                        optimum_supervision_tree_solver:sort_by_postorder(
                            lists:seq(1, 6), G))
        end},
@@ -175,7 +176,7 @@ sort_by_postorder_test_() ->
        fun() ->
           G = my_digraph:create(
                   lists:seq(1, 5), [{1, 2}, {2, 3}, {3, 4}, {4, 2}, {3, 5}]),
-          ?assertEqual([1, 2, 3, 4, 5],
+          ?assertEqual([5, 4, 3, 2, 1],
                        optimum_supervision_tree_solver:sort_by_postorder(
                            lists:seq(1, 5), G))
        end}]}.
