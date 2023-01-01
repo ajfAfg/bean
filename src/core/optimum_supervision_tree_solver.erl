@@ -43,8 +43,7 @@ group(Graph) ->
                                    Vertices -> Vertices
                                end
                             end,
-                        lists:uniq(
-                            lists:sort(GetStrongConnectedComponent()))
+                        lists:sort(GetStrongConnectedComponent())
                         =:= lists:sort(
                                 digraph_utils:reachable([V], Graph))
                      end,
@@ -63,7 +62,7 @@ group(Graph, GroupedGraph, Targets, GroupedParents) ->
     GroupedTargets =
         lists:map(fun(Target) ->
                      % NOTE: Behaviors in the same group may have dependencies.
-                     lists:reverse(sort_by_postorder(Target, Graph))
+                     sort_by_postorder(Target, Graph)
                   end,
                   lists:map(fun(Component) ->
                                lists:filter(fun(Target) -> lists:member(Target, Component) end,
@@ -72,11 +71,17 @@ group(Graph, GroupedGraph, Targets, GroupedParents) ->
                             Components)),
     lists:foreach(fun(GroupedVertices) ->
                      Label =
-                         case my_digraph_utils:get_cyclic_strong_component(Graph,
-                                                                           hd(GroupedVertices))
+                         case lists:any(fun ([_ | _]) -> true;
+                                            (false) -> false
+                                        end,
+                                        lists:map(fun(V) ->
+                                                     my_digraph_utils:get_cyclic_strong_component(Graph,
+                                                                                                  V)
+                                                  end,
+                                                  GroupedVertices))
                          of
-                             false -> [];
-                             _ -> cyclic_strong_component
+                             true -> cyclic_strong_component;
+                             false -> []
                          end,
                      digraph:add_vertex(GroupedGraph, GroupedVertices, Label)
                   end,
@@ -117,10 +122,7 @@ group(Graph, GroupedGraph, Targets, GroupedParents) ->
 
 -spec sort_by_postorder([digraph:vertex()], digraph:graph()) -> [digraph:vertex()].
 sort_by_postorder(Vertices, Graph) ->
-    RevPostOrderVertices =
-        lists:reverse(
-            digraph_utils:postorder(Graph)),
-    lists:filter(fun(V) -> lists:member(V, Vertices) end, RevPostOrderVertices).
+    lists:filter(fun(V) -> lists:member(V, Vertices) end, digraph_utils:postorder(Graph)).
 
 % TODO: Not "optimal" yet.
 -spec transform_into_optimum_supervision_tree(grouped_graph()) -> supervision_tree().
