@@ -154,6 +154,16 @@ group_test_() ->
                   my_digraph:create([1, 2], [])),
           ?assertNotMatch({[1], cyclic_strong_component}, digraph:vertex(GroupedGraph, [1])),
           ?assertNotMatch({[2], cyclic_strong_component}, digraph:vertex(GroupedGraph, [2]))
+       end},
+      {"If a vertex belonging to a strongly connected component consisting of multiple vertices is present in the group, it is monitored by one_for_all.",
+       fun() ->
+          GroupedGraph =
+              optimum_supervision_tree_solver:group(
+                  my_digraph:create(
+                      lists:seq(1, 6), [{1, 2}, {2, 3}, {3, 1}, {2, 4}, {2, 6}, {6, 4}])),
+          ?assertEqual(sort([[6, 3, 2, 1], [4], [5]]), sort(digraph:vertices(GroupedGraph))),
+          ?assertEqual([{[1, 2, 3, 6], [4]}], ExtractEdges(GroupedGraph)),
+          ?assertMatch({_, cyclic_strong_component}, digraph:vertex(GroupedGraph, [6, 3, 2, 1]))
        end}]}.
 
 sort_by_postorder_test_() ->

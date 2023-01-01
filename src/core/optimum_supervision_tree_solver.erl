@@ -71,11 +71,17 @@ group(Graph, GroupedGraph, Targets, GroupedParents) ->
                             Components)),
     lists:foreach(fun(GroupedVertices) ->
                      Label =
-                         case my_digraph_utils:get_cyclic_strong_component(Graph,
-                                                                           hd(GroupedVertices))
+                         case lists:any(fun ([_ | _]) -> true;
+                                            (false) -> false
+                                        end,
+                                        lists:map(fun(V) ->
+                                                     my_digraph_utils:get_cyclic_strong_component(Graph,
+                                                                                                  V)
+                                                  end,
+                                                  GroupedVertices))
                          of
-                             false -> [];
-                             _ -> cyclic_strong_component
+                             true -> cyclic_strong_component;
+                             false -> []
                          end,
                      digraph:add_vertex(GroupedGraph, GroupedVertices, Label)
                   end,
