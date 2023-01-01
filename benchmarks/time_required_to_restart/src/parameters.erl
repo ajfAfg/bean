@@ -1,6 +1,6 @@
 -module(parameters).
 
--export([get_vertex_num_and_edge_num/1, get_delay_time/1, get_loop_num/0]).
+-export([get_vertex_num_and_edge_num/1, get_delay_time/1]).
 
 -type vertex_num() :: pos_integer().
 -type edge_num() :: non_neg_integer().
@@ -26,5 +26,3 @@ get_vertex_num_and_edge_num(N) ->
 
 -spec get_delay_time(pos_integer()) -> pos_integer().
 get_delay_time(N) -> N * 10.
-
-get_loop_num() -> 50.
