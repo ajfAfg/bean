@@ -38,12 +38,12 @@ main(["measure", NStr, MStr]) ->
     {VertexNum, EdgeNum} = parameters:get_vertex_num_and_edge_num(N),
     DelayTime = parameters:get_delay_time(list_to_integer(MStr)),
     MaxRestartTime = 2 * DelayTime * VertexNum,
-    MeasurementTime =
-        average(lists:map(fun(_) -> measure_time_to_restart(GenServerNames, MaxRestartTime) end,
-                          lists:seq(1, parameters:get_loop_num()))),
-    io:format("VertexNum, EdgeNum, DelayTime: RestartTime (Average of ~p repetitions)~n",
-              [parameters:get_loop_num()]),
-    io:format("~p, ~p, ~p: ~p~n", [VertexNum, EdgeNum, DelayTime, MeasurementTime]),
+    RestartTimeSum =
+        lists:sum(
+            lists:map(fun(Name) -> measure_time_to_restart(Name, MaxRestartTime) end,
+                      GenServerNames)),
+    io:format("VertexNum, EdgeNum, DelayTime: RestartTimeSum~n"),
+    io:format("~p, ~p, ~p: ~p~n", [VertexNum, EdgeNum, DelayTime, RestartTimeSum]),
     erlang:halt();
 main(Args) ->
     io:format("Illegal options: ~p~n", [Args]),
@@ -56,15 +56,12 @@ create_gen_server_names(N) ->
     {VertexNum, _} = parameters:get_vertex_num_and_edge_num(N),
     lists:map(fun(X) -> list_to_atom(integer_to_list(X)) end, lists:seq(1, VertexNum)).
 
-measure_time_to_restart(GenServerNames, MaxRestartTime) ->
-    SelectedGenServerName =
-        lists:nth(
-            rand:uniform(length(GenServerNames)), GenServerNames),
+measure_time_to_restart(GenServerName, MaxRestartTime) ->
     StopTime = calendar:local_time(),
-    gen_server:stop(SelectedGenServerName),
+    gen_server:stop(GenServerName),
     % NOTE: Wait for the reboot complete.
     flush_until_timeout(MaxRestartTime),
-    StartTime = get_start_time(SelectedGenServerName),
+    StartTime = get_start_time(GenServerName),
     {_Days, Time} = calendar:time_difference(StopTime, StartTime),
     calendar:time_to_seconds(Time).
 
@@ -73,11 +70,6 @@ get_start_time(Name) ->
     {ok, Statistics} = sys:statistics(Name, get),
     {start_time, StartTime} = lists:keyfind(start_time, 1, Statistics),
     StartTime.
-
--spec average([number()]) -> non_neg_integer().
-average(NumList) ->
-    Sum = lists:foldl(fun(X, Acc) -> X + Acc end, 0, NumList),
-    Sum / length(NumList).
 
 flush_until_timeout(Timeout) ->
     receive _ -> flush_until_timeout(Timeout) after Timeout -> ok end.
