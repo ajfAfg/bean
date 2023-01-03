@@ -5,19 +5,55 @@ import shutil
 
 import parameters
 
+avg_restart_times_filename = f'avg_restart_times_with_loop_num_{parameters.loop_num}.csv'
+costs_filename = f'costs_with_loop_num_{parameters.loop_num * len(parameters.delay_times)}.csv'
+with open(avg_restart_times_filename, 'w') as f:
+    print('vertex_num(no), edge_num(no), delay_time(ms), avg_restart_time(s)', file=f)
+with open(costs_filename, 'w') as f:
+    print('vertex_num(no), edge_num(no), cost(no)', file=f)
+
 for (vertex_num, edge_num) in parameters.vertex_nums_edge_nums:
+    costs = []
+
     for delay_time in parameters.delay_times:
-        params = list(
-            map(lambda x: str(x), [vertex_num, edge_num, delay_time]))
+        avg_restart_times = []
 
-        sp.run(['rebar3', 'escriptize'], stdout=sp.DEVNULL, stderr=sp.STDOUT)
-        sp.run(['_build/default/bin/time_required_to_restart',
-                'generate-gen-server'] + params)
+        for _ in range(parameters.loop_num):
+            params = list(
+                map(lambda x: str(x), [vertex_num, edge_num, delay_time]))
 
-        sp.run(['rebar3', 'bean'], stdout=sp.DEVNULL, stderr=sp.STDOUT)
+            # NOTE: 1. Generate gen_servers
+            sp.run(['rebar3', 'escriptize'],
+                   stdout=sp.DEVNULL, stderr=sp.STDOUT)
+            sp.run(['_build/default/bin/time_required_to_restart',
+                    'generate-gen-server'] + params, stdout=sp.DEVNULL, stderr=sp.STDOUT)
 
-        sp.run(['rebar3', 'escriptize'], stdout=sp.DEVNULL, stderr=sp.STDOUT)
-        sp.run(['_build/default/bin/time_required_to_restart', 'measure'] + params)
+            # NOTE: 2. Generate a supervision tree
+            sp.run(['rebar3', 'bean'], stdout=sp.DEVNULL, stderr=sp.STDOUT)
 
-        shutil.rmtree('src/gen_servers')
-        shutil.rmtree('src/bean')
+            sp.run(['rebar3', 'escriptize'],
+                   stdout=sp.DEVNULL, stderr=sp.STDOUT)
+            try:
+                # NOTE: 3. Calculate the cost of the supervision tree
+                costs.append(int(sp.check_output(
+                    ['_build/default/bin/time_required_to_restart', 'calculate-cost']).decode('utf-8')))
+
+                # NOTE: 4. Measure total restart time for each gen_servers
+                avg_restart_times.append(float(sp.check_output(
+                    ['_build/default/bin/time_required_to_restart', 'measure'] + params).decode('utf-8')))
+            except Exception as e:
+                with open('error.log', 'a') as f:
+                    print(vertex_num, edge_num, delay_time, f'({e})', file=f)
+            finally:
+                shutil.rmtree('src/gen_servers')
+                shutil.rmtree('src/bean')
+
+        with open(avg_restart_times_filename, 'a') as f:
+            avg_restart_time = sum(avg_restart_times) / parameters.loop_num
+            print(
+                f'{vertex_num}, {edge_num}, {delay_time}, {avg_restart_time}', file=f)
+
+    with open(costs_filename, 'a') as f:
+        cost = sum(costs) / (parameters.loop_num * len(parameters.delay_times))
+        print(
+            f'{vertex_num}, {edge_num}, {cost}', file=f)

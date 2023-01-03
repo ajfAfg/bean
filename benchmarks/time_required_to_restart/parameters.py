@@ -13,3 +13,5 @@ vertex_nums_edge_nums = [
     (100, 9900)]
 
 delay_times = list(map(lambda x: x * 10, range(1, 11)))
+
+loop_num = 10
