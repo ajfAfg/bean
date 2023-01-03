@@ -24,7 +24,7 @@ main(["generate-gen-server" | StrParameters]) ->
                           Graph)),
     erlang:halt();
 main(["measure" | StrParameters]) ->
-    [VertexNum, EdgeNum, DelayTime] = lists:map(fun erlang:list_to_integer/1, StrParameters),
+    [VertexNum, _EdgeNum, DelayTime] = lists:map(fun erlang:list_to_integer/1, StrParameters),
     % NOTE: When a gen_server is initialized, a message is sent to this name.
     register(measurer, self()),
     {ok, Pid} = supervisor:start_link(bean, []),
@@ -32,13 +32,30 @@ main(["measure" | StrParameters]) ->
     % NOTE: Omit supervision reports
     logger:add_handler_filter(default, ?MODULE, {fun(_, _) -> stop end, nostate}),
     GenServerNames = create_gen_server_names(VertexNum),
-    MaxRestartTime = 2 * DelayTime * VertexNum,
-    RestartTimeSum =
-        lists:sum(
-            lists:map(fun(Name) -> measure_time_to_restart(Name, MaxRestartTime) end,
-                      GenServerNames)),
-    io:format("VertexNum, EdgeNum, DelayTime: RestartTimeSum~n"),
-    io:format("~p, ~p, ~p: ~p~n", [VertexNum, EdgeNum, DelayTime, RestartTimeSum]),
+    MaxRestartTime = DelayTime * VertexNum,
+    AvgRestartTime =
+        average(lists:map(fun(Name) -> measure_time_to_restart(Name, MaxRestartTime) end,
+                          GenServerNames)),
+    io:format("~p~n", [AvgRestartTime]),
+    erlang:halt();
+main(["calculate-cost"]) ->
+    Modules = find_source_files("src/bean"),
+    SupNames =
+        lists:map(fun(M) ->
+                     {ok, CModule} = dialyzer_utils:get_core_from_src(M),
+                     {c_literal, _, ModuleName} = cerl:module_name(CModule),
+                     ModuleName
+                  end,
+                  Modules),
+    Sups =
+        lists:map(fun(Name) ->
+                     {ok, SupSpec} = apply(Name, init, [[]]),
+                     {Name, SupSpec}
+                  end,
+                  SupNames),
+    io:format("~p~n",
+              [supervision_tree:calc_cost(
+                   supervision_tree:from_supervisor_specs(Sups))]),
     erlang:halt();
 main(Args) ->
     io:format("Illegal options: ~p~n", [Args]),
@@ -65,5 +82,13 @@ get_start_time(Name) ->
     {start_time, StartTime} = lists:keyfind(start_time, 1, Statistics),
     StartTime.
 
+-spec average([number()]) -> non_neg_integer().
+average(NumList) ->
+    Sum = lists:foldl(fun(X, Acc) -> X + Acc end, 0, NumList),
+    Sum / length(NumList).
+
 flush_until_timeout(Timeout) ->
     receive _ -> flush_until_timeout(Timeout) after Timeout -> ok end.
+
+find_source_files(Dir) ->
+    filelib:fold_files(Dir, ".*\.erl", true, fun(X, Acc) -> [X | Acc] end, []).
