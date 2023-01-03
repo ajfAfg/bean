@@ -3,17 +3,21 @@
 import subprocess as sp
 import shutil
 
-for i in range(1, 13):
-for j in range(1, 11):
-    sp.run(['rebar3', 'escriptize'], stdout=sp.DEVNULL, stderr=sp.STDOUT)
-    sp.run(['_build/default/bin/time_required_to_restart',
-            'generate-gen-server', str(i), str(j)])
+import parameters
 
-    sp.run(['rebar3', 'bean'], stdout=sp.DEVNULL, stderr=sp.STDOUT)
+for (vertex_num, edge_num) in parameters.vertex_nums_edge_nums:
+    for delay_time in parameters.delay_times:
+        params = list(
+            map(lambda x: str(x), [vertex_num, edge_num, delay_time]))
 
-    sp.run(['rebar3', 'escriptize'], stdout=sp.DEVNULL, stderr=sp.STDOUT)
-    sp.run(['_build/default/bin/time_required_to_restart',
-            'measure', str(i), str(j)])
+        sp.run(['rebar3', 'escriptize'], stdout=sp.DEVNULL, stderr=sp.STDOUT)
+        sp.run(['_build/default/bin/time_required_to_restart',
+                'generate-gen-server'] + params)
 
-    shutil.rmtree('src/gen_servers')
-    shutil.rmtree('src/bean')
+        sp.run(['rebar3', 'bean'], stdout=sp.DEVNULL, stderr=sp.STDOUT)
+
+        sp.run(['rebar3', 'escriptize'], stdout=sp.DEVNULL, stderr=sp.STDOUT)
+        sp.run(['_build/default/bin/time_required_to_restart', 'measure'] + params)
+
+        shutil.rmtree('src/gen_servers')
+        shutil.rmtree('src/bean')
