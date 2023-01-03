@@ -10,7 +10,15 @@ from_supervisor_specs_test_() ->
          [{s1, {#{strategy => one_for_one}, [#{id => g1}, #{id => g2}, #{id => s2}]}},
           {s2, {#{strategy => rest_for_one}, [#{id => g3}]}}]],
     {inparallel,
-     [{"Retains all vertices.",
+     [{"The Return value is a tree.",
+       fun() ->
+          [Sups1, Sups2] = TestCases,
+          ?assert(digraph_utils:is_tree(
+                      supervision_tree:from_supervisor_specs(Sups1))),
+          ?assert(digraph_utils:is_tree(
+                      supervision_tree:from_supervisor_specs(Sups2)))
+       end},
+      {"Retains all vertices.",
        fun() ->
           [Sups1, Sups2] = TestCases,
           ?assertEqual(sort([s1, g1, g2]),
