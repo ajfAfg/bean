@@ -8,8 +8,8 @@
 %%====================================================================
 
 %% escript Entry point
-main(["generate-gen-server", NStr, MStr]) ->
-    {VertexNum, EdgeNum} = parameters:get_vertex_num_and_edge_num(list_to_integer(NStr)),
+main(["generate-gen-server" | StrParameters]) ->
+    [VertexNum, EdgeNum, DelayTime] = lists:map(fun erlang:list_to_integer/1, StrParameters),
     Vertices =
         lists:map(fun erlang:list_to_atom/1,
                   lists:map(fun erlang:integer_to_list/1, lists:seq(1, VertexNum))),
@@ -20,23 +20,18 @@ main(["generate-gen-server", NStr, MStr]) ->
                     file:write_file(
                         io_lib:format("src/gen_servers/~s.erl", [Name]), Code)
                  end,
-                 maps:map(fun(From, Tos) ->
-                             DelayTime = parameters:get_delay_time(list_to_integer(MStr)),
-                             gen_server_generator:generate(From, Tos, DelayTime)
-                          end,
+                 maps:map(fun(From, Tos) -> gen_server_generator:generate(From, Tos, DelayTime) end,
                           Graph)),
     erlang:halt();
-main(["measure", NStr, MStr]) ->
+main(["measure" | StrParameters]) ->
+    [VertexNum, EdgeNum, DelayTime] = lists:map(fun erlang:list_to_integer/1, StrParameters),
     % NOTE: When a gen_server is initialized, a message is sent to this name.
     register(measurer, self()),
-    N = list_to_integer(NStr),
     {ok, Pid} = supervisor:start_link(bean, []),
     unlink(Pid),
     % NOTE: Omit supervision reports
     logger:add_handler_filter(default, ?MODULE, {fun(_, _) -> stop end, nostate}),
-    GenServerNames = create_gen_server_names(N),
-    {VertexNum, EdgeNum} = parameters:get_vertex_num_and_edge_num(N),
-    DelayTime = parameters:get_delay_time(list_to_integer(MStr)),
+    GenServerNames = create_gen_server_names(VertexNum),
     MaxRestartTime = 2 * DelayTime * VertexNum,
     RestartTimeSum =
         lists:sum(
@@ -52,8 +47,7 @@ main(Args) ->
 %%====================================================================
 %% Internal functions
 %%====================================================================
-create_gen_server_names(N) ->
-    {VertexNum, _} = parameters:get_vertex_num_and_edge_num(N),
+create_gen_server_names(VertexNum) ->
     lists:map(fun(X) -> list_to_atom(integer_to_list(X)) end, lists:seq(1, VertexNum)).
 
 measure_time_to_restart(GenServerName, MaxRestartTime) ->
