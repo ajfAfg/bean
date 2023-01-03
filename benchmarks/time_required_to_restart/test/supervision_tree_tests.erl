@@ -77,3 +77,61 @@ from_supervisor_specs_test_() ->
                   supervision_tree:from_supervisor_specs(Sups2), s2),
           ?assertEqual(1, Order2_2(g3))
        end}]}.
+
+calc_cost_test_() ->
+    {inparallel,
+     [{"If all restart strategies are `one_for_one`, the number of gen_servers and the cost is the same.",
+       fun() ->
+          Sups1 = [{s1, {#{strategy => one_for_one}, [#{id => g1}, #{id => g2}]}}],
+          ?assertEqual(2,
+                       supervision_tree:calc_cost(
+                           supervision_tree:from_supervisor_specs(Sups1))),
+
+          Sups2 =
+              [{s1, {#{strategy => one_for_one}, [#{id => g1}, #{id => s1}]}},
+               {s2, {#{strategy => one_for_one}, [#{id => g2}, #{id => g3}, #{id => g4}]}}],
+          ?assertEqual(4,
+                       supervision_tree:calc_cost(
+                           supervision_tree:from_supervisor_specs(Sups2)))
+       end},
+      {"If a restart strategy is `one_for_all`, the cost of siblings is also added.",
+       fun() ->
+          Sups1 = [{s1, {#{strategy => one_for_all}, [#{id => g1}, #{id => g2}]}}],
+          ?assertEqual(2 + 2,
+                       supervision_tree:calc_cost(
+                           supervision_tree:from_supervisor_specs(Sups1))),
+
+          Sups2 =
+              [{s1, {#{strategy => one_for_all}, [#{id => g1}, #{id => s2}]}},
+               {s2, {#{strategy => one_for_all}, [#{id => g2}, #{id => g3}, #{id => g4}]}}],
+          ?assertEqual(5 + 3 + 3 + 3,
+                       supervision_tree:calc_cost(
+                           supervision_tree:from_supervisor_specs(Sups2)))
+       end},
+      {"If a restart strategy is `rest_for_one`, the cost of REST siblings is also added.",
+       fun() ->
+          Sups1 = [{s1, {#{strategy => rest_for_one}, [#{id => g1}, #{id => g2}]}}],
+          ?assertEqual(2 + 1,
+                       supervision_tree:calc_cost(
+                           supervision_tree:from_supervisor_specs(Sups1))),
+
+          Sups2 =
+              [{s1, {#{strategy => rest_for_one}, [#{id => g1}, #{id => s2}]}},
+               {s2, {#{strategy => rest_for_one}, [#{id => g2}, #{id => g3}, #{id => g4}]}}],
+          ?assertEqual(5 + 3 + 2 + 1,
+                       supervision_tree:calc_cost(
+                           supervision_tree:from_supervisor_specs(Sups2)))
+       end},
+      {"Restart strategies can be mixed",
+       fun() ->
+          Sups =
+              [{s1, {#{strategy => one_for_one}, [#{id => s2}, #{id => s3}]}},
+               {s2, {#{strategy => rest_for_one}, [#{id => g5}, #{id => s4}]}},
+               {s3, {#{strategy => rest_for_one}, [#{id => g6}, #{id => g7}]}},
+               {s4,
+                {#{strategy => one_for_all},
+                 [#{id => g1}, #{id => g2}, #{id => g3}, #{id => g4}]}}],
+          ?assertEqual(4 + 4 + 4 + 4 + 6 + 2 + 1,
+                       supervision_tree:calc_cost(
+                           supervision_tree:from_supervisor_specs(Sups)))
+       end}]}.
