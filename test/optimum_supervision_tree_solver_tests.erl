@@ -90,7 +90,7 @@ group_test_() ->
           ?assertEqual(sort(map(fun lists:sort/1, [[1], [2, 3, 4], [5]])),
                        sort(map(fun lists:sort/1, digraph:vertices(GroupedGraph)))),
           ?assertEqual(sort([{[1], sort([2, 3, 4])}, {sort([2, 3, 4]), [5]}]),
-                       ExtractEdges(GroupedGraph))
+                       sort(ExtractEdges(GroupedGraph)))
        end},
       {"Can group a graph having circles in first and last",
        fun() ->
