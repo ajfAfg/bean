@@ -1,7 +1,7 @@
 -module(optimum_supervision_tree_solver).
 
 -export([solve/1, group/1, sort_by_postorder/2,
-         transform_into_optimum_supervision_tree/1]).
+         transform_into_optimum_supervision_tree/2]).
 
 -export_type([supervision_tree/0]).
 
@@ -29,7 +29,7 @@ solve(Dependencies) ->
                               maps:keys(Dependencies))),
             my_digraph:create(Vertices, Edges)
         end,
-    transform_into_optimum_supervision_tree(group(Graph)).
+    transform_into_optimum_supervision_tree(Graph, group(Graph)).
 
 -spec group(dependency_graph()) -> grouped_graph().
 group(Graph) ->
@@ -60,30 +60,11 @@ group(Graph, GroupedGraph, Targets, GroupedParents) ->
     SubGraph = digraph_utils:subgraph(Graph, digraph_utils:reaching(Targets, Graph)),
     Components = digraph_utils:components(SubGraph),
     GroupedTargets =
-        lists:map(fun(Target) ->
-                     % NOTE: Behaviors in the same group may have dependencies.
-                     sort_by_postorder(Target, Graph)
+        lists:map(fun(Component) ->
+                     lists:filter(fun(Target) -> lists:member(Target, Component) end, Targets)
                   end,
-                  lists:map(fun(Component) ->
-                               lists:filter(fun(Target) -> lists:member(Target, Component) end,
-                                            Targets)
-                            end,
-                            Components)),
-    lists:foreach(fun(GroupedVertices) ->
-                     Label =
-                         case lists:any(fun ([_ | _]) -> true;
-                                            (false) -> false
-                                        end,
-                                        lists:map(fun(V) ->
-                                                     my_digraph_utils:get_cyclic_strong_component(Graph,
-                                                                                                  V)
-                                                  end,
-                                                  GroupedVertices))
-                         of
-                             true -> cyclic_strong_component;
-                             false -> []
-                         end,
-                     digraph:add_vertex(GroupedGraph, GroupedVertices, Label)
+                  Components),
+    lists:foreach(fun(GroupedVertices) -> digraph:add_vertex(GroupedGraph, GroupedVertices)
                   end,
                   GroupedTargets),
     lists:foreach(fun(GroupedVertices) ->
@@ -125,39 +106,51 @@ sort_by_postorder(Vertices, Graph) ->
     lists:filter(fun(V) -> lists:member(V, Vertices) end, digraph_utils:postorder(Graph)).
 
 % TODO: Not "optimal" yet.
--spec transform_into_optimum_supervision_tree(grouped_graph()) -> supervision_tree().
-transform_into_optimum_supervision_tree(GroupedGraph) ->
+-spec transform_into_optimum_supervision_tree(dependency_graph(), grouped_graph()) ->
+                                                 supervision_tree().
+transform_into_optimum_supervision_tree(Graph, GroupedGraph) ->
     case lists:filter(fun(V) -> digraph:out_degree(GroupedGraph, V) =:= 0 end,
                       digraph:vertices(GroupedGraph))
     of
         [] -> throw(impossible);
-        [GroupedVertex] -> transform_into_optimum_supervision_tree(GroupedGraph, GroupedVertex);
+        [GroupedVertex] ->
+            transform_into_optimum_supervision_tree(Graph, GroupedGraph, GroupedVertex);
         GroupedVertices ->
             {one_for_one,
              lists:map(fun(GroupedVertex) ->
-                          transform_into_optimum_supervision_tree(GroupedGraph, GroupedVertex)
+                          transform_into_optimum_supervision_tree(Graph,
+                                                                  GroupedGraph,
+                                                                  GroupedVertex)
                        end,
                        GroupedVertices)}
     end.
 
--spec transform_into_optimum_supervision_tree(grouped_graph(), grouped_graph_vertex()) ->
+-spec transform_into_optimum_supervision_tree(dependency_graph(),
+                                              grouped_graph(),
+                                              grouped_graph_vertex()) ->
                                                  supervision_tree().
-transform_into_optimum_supervision_tree(GroupedGraph, GroupedVertex) ->
+transform_into_optimum_supervision_tree(Graph, GroupedGraph, GroupedVertex) ->
     RightChild =
         case digraph:in_neighbours(GroupedGraph, GroupedVertex) of
             [] -> nil;
-            [V] -> transform_into_optimum_supervision_tree(GroupedGraph, V);
+            [V] -> transform_into_optimum_supervision_tree(Graph, GroupedGraph, V);
             Vs ->
                 {one_for_one,
-                 lists:map(fun(V) -> transform_into_optimum_supervision_tree(GroupedGraph, V) end,
+                 lists:map(fun(V) -> transform_into_optimum_supervision_tree(Graph, GroupedGraph, V)
+                           end,
                            Vs)}
         end,
     Strategy =
-        case digraph:vertex(GroupedGraph, GroupedVertex) of
-            {GroupedVertex, cyclic_strong_component} -> one_for_all;
-            {GroupedVertex, []} -> rest_for_one
+        case lists:any(fun ([_ | _]) -> true;
+                           (false) -> false
+                       end,
+                       [my_digraph_utils:get_cyclic_strong_component(Graph, V)
+                        || V <- GroupedVertex])
+        of
+            true -> one_for_all;
+            false -> rest_for_one
         end,
     case RightChild of
-        nil -> {Strategy, GroupedVertex};
-        _ -> {Strategy, GroupedVertex ++ [RightChild]}
+        nil -> {Strategy, sort_by_postorder(GroupedVertex, Graph)};
+        _ -> {Strategy, sort_by_postorder(GroupedVertex, Graph) ++ [RightChild]}
     end.
