@@ -117,12 +117,11 @@ transform(Graph, GroupedGraph, GroupedVertex) ->
             [V] -> transform(Graph, GroupedGraph, V);
             Vs -> {one_for_one, lists:map(fun(V) -> transform(Graph, GroupedGraph, V) end, Vs)}
         end,
+    GroupedVertex_ = sets:from_list(GroupedVertex),
     Strategy =
-        case lists:any(fun ([_ | _]) -> true;
-                           (false) -> false
-                       end,
-                       [my_digraph_utils:get_cyclic_strong_component(Graph, V)
-                        || V <- GroupedVertex])
+        case my_sets:any(fun(Set) -> sets:size(Set) > 0 end,
+                         my_sets:map(fun(V) -> get_cyclic_strong_component(Graph, V) end,
+                                     GroupedVertex_))
         of
             true -> one_for_all;
             false -> rest_for_one
@@ -141,6 +140,14 @@ vertices(G) ->
                               sets:set(digraph:vertex()).
 get_strong_component(Digraph, Vertex) ->
     case my_digraph_utils:get_strong_component(Digraph, Vertex) of
+        false -> sets:new();
+        Component -> sets:from_list(Component)
+    end.
+
+-spec get_cyclic_strong_component(digraph:graph(), digraph:vertex()) ->
+                                     sets:set(digraph:vertex()).
+get_cyclic_strong_component(Digraph, Vertex) ->
+    case my_digraph_utils:get_cyclic_strong_component(Digraph, Vertex) of
         false -> sets:new();
         Component -> sets:from_list(Component)
     end.
