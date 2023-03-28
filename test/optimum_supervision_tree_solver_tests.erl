@@ -126,7 +126,7 @@ sort_by_postorder_test_() ->
                            lists:seq(1, 5), G))
        end}]}.
 
-transform_into_optimum_supervision_tree_test_() ->
+transform_test_() ->
     {inparallel,
      [{"Dependency-free behaviors are monitored by `one_for_one`.",
        fun() ->
@@ -138,27 +138,23 @@ transform_into_optimum_supervision_tree_test_() ->
                          {one_for_one,
                           % NOTE: Not optimal yet.
                           [{rest_for_one, [3]}, {rest_for_one, [2]}, {rest_for_one, [1]}]}]},
-                       optimum_supervision_tree_solver:transform_into_optimum_supervision_tree(Graph,
-                                                                                               GroupedGraph))
+                       optimum_supervision_tree_solver:transform(Graph, GroupedGraph))
        end},
       {"Interdependent behaviors are monitored by `one_for_all`.",
        fun() ->
           Graph1 = my_digraph:create([1, 2], [{1, 2}, {2, 1}]),
           GroupedGraph1 = my_digraph:create([[1, 2]], []),
           ?assertEqual({one_for_all, [2, 1]},
-                       optimum_supervision_tree_solver:transform_into_optimum_supervision_tree(Graph1,
-                                                                                               GroupedGraph1)),
+                       optimum_supervision_tree_solver:transform(Graph1, GroupedGraph1)),
           Graph2 = my_digraph:create([1, 2, 3, 4], [{1, 2}, {1, 3}, {2, 4}, {3, 1}, {4, 1}]),
           GroupedGraph2 = my_digraph:create([[1, 2, 3, 4]], []),
           ?assertEqual({one_for_all, [3, 4, 2, 1]},
-                       optimum_supervision_tree_solver:transform_into_optimum_supervision_tree(Graph2,
-                                                                                               GroupedGraph2))
+                       optimum_supervision_tree_solver:transform(Graph2, GroupedGraph2))
        end},
       {"`GroupedVertex` with an in-degree of 0 and a length greater than or equal to 2 is monitored by `rest_for_one`.",
        fun() ->
           Graph = my_digraph:create([1, 2, 3, 4], [{1, 2}, {1, 4}, {2, 3}, {2, 4}, {3, 4}]),
           GroupedGraph = my_digraph:create([[1, 2, 3], [4]], [{[1, 2, 3], [4]}]),
           ?assertEqual({rest_for_one, [4, {rest_for_one, [3, 2, 1]}]},
-                       optimum_supervision_tree_solver:transform_into_optimum_supervision_tree(Graph,
-                                                                                               GroupedGraph))
+                       optimum_supervision_tree_solver:transform(Graph, GroupedGraph))
        end}]}.

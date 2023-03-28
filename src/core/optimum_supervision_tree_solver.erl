@@ -1,7 +1,6 @@
 -module(optimum_supervision_tree_solver).
 
--export([solve/1, group/1, sort_by_postorder/2,
-         transform_into_optimum_supervision_tree/2]).
+-export([solve/1, group/1, sort_by_postorder/2, transform/2]).
 
 -export_type([supervision_tree/0]).
 
@@ -14,7 +13,7 @@
 % TODO: Prevent the error from occurring in the first place in some way.
 -ignore_xref(group/1).
 -ignore_xref(sort_by_postorder/2).
--ignore_xref(transform_into_optimum_supervision_tree/1).
+-ignore_xref(transform/1).
 
 -spec solve(gen_server_dependencies:dependencies()) -> supervision_tree().
 solve(Dependencies) ->
@@ -29,7 +28,7 @@ solve(Dependencies) ->
                               maps:keys(Dependencies))),
             my_digraph:create(Vertices, Edges)
         end,
-    transform_into_optimum_supervision_tree(Graph, group(Graph)).
+    transform(Graph, group(Graph)).
 
 -spec group(dependency_graph()) -> grouped_graph().
 group(Graph) ->
@@ -105,40 +104,27 @@ group(Graph, GroupedGraph, Targets, GroupedParents) ->
 sort_by_postorder(Vertices, Graph) ->
     lists:filter(fun(V) -> lists:member(V, Vertices) end, digraph_utils:postorder(Graph)).
 
-% TODO: Not "optimal" yet.
--spec transform_into_optimum_supervision_tree(dependency_graph(), grouped_graph()) ->
-                                                 supervision_tree().
-transform_into_optimum_supervision_tree(Graph, GroupedGraph) ->
+-spec transform(dependency_graph(), grouped_graph()) -> supervision_tree().
+transform(Graph, GroupedGraph) ->
     case lists:filter(fun(V) -> digraph:out_degree(GroupedGraph, V) =:= 0 end,
                       digraph:vertices(GroupedGraph))
     of
         [] -> throw(impossible);
-        [GroupedVertex] ->
-            transform_into_optimum_supervision_tree(Graph, GroupedGraph, GroupedVertex);
+        [GroupedVertex] -> transform(Graph, GroupedGraph, GroupedVertex);
         GroupedVertices ->
             {one_for_one,
-             lists:map(fun(GroupedVertex) ->
-                          transform_into_optimum_supervision_tree(Graph,
-                                                                  GroupedGraph,
-                                                                  GroupedVertex)
-                       end,
+             lists:map(fun(GroupedVertex) -> transform(Graph, GroupedGraph, GroupedVertex) end,
                        GroupedVertices)}
     end.
 
--spec transform_into_optimum_supervision_tree(dependency_graph(),
-                                              grouped_graph(),
-                                              grouped_graph_vertex()) ->
-                                                 supervision_tree().
-transform_into_optimum_supervision_tree(Graph, GroupedGraph, GroupedVertex) ->
+-spec transform(dependency_graph(), grouped_graph(), grouped_graph_vertex()) ->
+                   supervision_tree().
+transform(Graph, GroupedGraph, GroupedVertex) ->
     RightChild =
         case digraph:in_neighbours(GroupedGraph, GroupedVertex) of
             [] -> nil;
-            [V] -> transform_into_optimum_supervision_tree(Graph, GroupedGraph, V);
-            Vs ->
-                {one_for_one,
-                 lists:map(fun(V) -> transform_into_optimum_supervision_tree(Graph, GroupedGraph, V)
-                           end,
-                           Vs)}
+            [V] -> transform(Graph, GroupedGraph, V);
+            Vs -> {one_for_one, lists:map(fun(V) -> transform(Graph, GroupedGraph, V) end, Vs)}
         end,
     Strategy =
         case lists:any(fun ([_ | _]) -> true;
