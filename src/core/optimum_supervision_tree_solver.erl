@@ -8,7 +8,7 @@
 -type dependency_graph() :: digraph:graph().
 -type dependency_graph_vertex() :: atom().
 -type grouped_graph() :: digraph:graph().
--type grouped_graph_vertex() :: [atom()].
+-type grouped_graph_vertex() :: sets:set(atom()).
 
 % TODO: Prevent the error from occurring in the first place in some way.
 -ignore_xref(group/1).
@@ -33,63 +33,64 @@ solve(Dependencies) ->
 -spec group(dependency_graph()) -> grouped_graph().
 group(Graph) ->
     Pred = fun(V) -> get_strong_component(Graph, V) =:= reachable([V], Graph) end,
-    Targets = [V || V <- digraph:vertices(Graph), Pred(V)],
-    group(Graph, digraph:new(), Targets, []).
+    Targets = sets:filter(Pred, vertices(Graph)),
+    group(Graph, digraph:new(), Targets, sets:new()).
 
 -spec group(dependency_graph(),
             grouped_graph(),
-            [dependency_graph_vertex()],
-            [grouped_graph_vertex()]) ->
+            sets:set(dependency_graph_vertex()),
+            sets:set(grouped_graph_vertex())) ->
                grouped_graph().
-group(_, GroupedGraph, [], _) -> GroupedGraph;
 group(Graph, GroupedGraph, Targets, GroupedParents) ->
-    SubGraph = digraph_utils:subgraph(Graph, digraph_utils:reaching(Targets, Graph)),
-    Components = components(SubGraph),
-    Targets_ = sets:from_list(Targets),
-    GroupedTargets =
-        my_sets:map(fun(Component) -> sets:intersection(Targets_, Component) end, Components),
-    my_sets:foreach(fun(GroupedVertices) ->
-                       digraph:add_vertex(GroupedGraph, sets:to_list(GroupedVertices))
-                    end,
-                    GroupedTargets),
-    GroupedParents_ = sets:from_list([sets:from_list(V) || V <- GroupedParents]),
-    my_sets:foreach(fun(GroupedVertices) ->
-                       my_sets:foreach(fun(Parent) ->
-                                          % NOTE: Twist edges as we grouped up vertices
-                                          case my_sets:any(fun(V1) ->
-                                                              my_sets:any(fun(V2) ->
-                                                                             my_digraph:has_path(Graph,
-                                                                                                 V1,
-                                                                                                 V2)
-                                                                          end,
-                                                                          Parent)
-                                                           end,
-                                                           GroupedVertices)
-                                          of
-                                              true ->
-                                                  digraph:add_edge(GroupedGraph,
-                                                                   sets:to_list(GroupedVertices),
-                                                                   sets:to_list(Parent));
-                                              false -> ok
-                                          end
-                                       end,
-                                       GroupedParents_)
-                    end,
-                    GroupedTargets),
-    NewTargets =
-        % NOTE:
-        % There may be unvisited behaviors that are not children of `Targets`
-        % but on which the children of `Targets` depend.
-        sets:subtract(reachable(lists:flatten(
-                                    lists:map(fun(V) -> digraph:in_neighbours(Graph, V) end,
-                                              Targets)),
-                                SubGraph),
-                      Targets_),
-    NewTargets_ = sets:to_list(NewTargets),
-    GroupedTargets_ =
-        sets:to_list(
-            my_sets:map(fun sets:to_list/1, GroupedTargets)),
-    group(Graph, GroupedGraph, NewTargets_, GroupedTargets_).
+    case sets:size(Targets) =:= 0 of
+        true -> GroupedGraph;
+        false ->
+            SubGraph =
+                digraph_utils:subgraph(Graph,
+                                       digraph_utils:reaching(
+                                           sets:to_list(Targets), Graph)),
+            Components = components(SubGraph),
+            GroupedTargets =
+                my_sets:map(fun(Component) -> sets:intersection(Targets, Component) end,
+                            Components),
+            my_sets:foreach(fun(GroupedVertices) ->
+                               digraph:add_vertex(GroupedGraph, GroupedVertices)
+                            end,
+                            GroupedTargets),
+            my_sets:foreach(fun(GroupedVertices) ->
+                               my_sets:foreach(fun(Parent) ->
+                                                  % NOTE: Twist edges as we grouped up vertices
+                                                  case my_sets:any(fun(V1) ->
+                                                                      my_sets:any(fun(V2) ->
+                                                                                     my_digraph:has_path(Graph,
+                                                                                                         V1,
+                                                                                                         V2)
+                                                                                  end,
+                                                                                  Parent)
+                                                                   end,
+                                                                   GroupedVertices)
+                                                  of
+                                                      true ->
+                                                          digraph:add_edge(GroupedGraph,
+                                                                           GroupedVertices,
+                                                                           Parent);
+                                                      false -> ok
+                                                  end
+                                               end,
+                                               GroupedParents)
+                            end,
+                            GroupedTargets),
+            NewTargets =
+                % NOTE:
+                % There may be unvisited behaviors that are not children of `Targets`
+                % but on which the children of `Targets` depend.
+                sets:subtract(reachable([U
+                                         || V <- sets:to_list(Targets),
+                                            U <- digraph:in_neighbours(Graph, V)],
+                                        SubGraph),
+                              Targets),
+            group(Graph, GroupedGraph, NewTargets, GroupedTargets)
+    end.
 
 -spec sort_by_postorder([digraph:vertex()], digraph:graph()) -> [digraph:vertex()].
 sort_by_postorder(Vertices, Graph) ->
@@ -117,18 +118,17 @@ transform(Graph, GroupedGraph, GroupedVertex) ->
             [V] -> transform(Graph, GroupedGraph, V);
             Vs -> {one_for_one, lists:map(fun(V) -> transform(Graph, GroupedGraph, V) end, Vs)}
         end,
-    GroupedVertex_ = sets:from_list(GroupedVertex),
     Strategy =
         case my_sets:any(fun(Set) -> sets:size(Set) > 0 end,
                          my_sets:map(fun(V) -> get_cyclic_strong_component(Graph, V) end,
-                                     GroupedVertex_))
+                                     GroupedVertex))
         of
             true -> one_for_all;
             false -> rest_for_one
         end,
     case RightChild of
-        nil -> {Strategy, sort_by_postorder(GroupedVertex, Graph)};
-        _ -> {Strategy, sort_by_postorder(GroupedVertex, Graph) ++ [RightChild]}
+        nil -> {Strategy, sort_by_postorder(sets:to_list(GroupedVertex), Graph)};
+        _ -> {Strategy, sort_by_postorder(sets:to_list(GroupedVertex), Graph) ++ [RightChild]}
     end.
 
 -spec vertices(digraph:graph()) -> sets:set(digraph:vertex()).
