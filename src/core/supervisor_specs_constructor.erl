@@ -2,11 +2,8 @@
 
 -export([construct/1]).
 
--spec construct([cerl:c_module()]) -> [supervisor_spec:t()].
-construct(CModules) ->
-    SupervisionTree =
-        optimum_supervision_tree_solver:solve(
-            dependency_extractor:extract_dependencies(CModules)),
+-spec construct(supervision_tree:t()) -> [supervisor_spec:t()].
+construct(SupervisionTree) ->
     convert_sup_specs_from_grouped_dependencies(SupervisionTree,
                                                 create_sup_names(SupervisionTree),
                                                 []).
