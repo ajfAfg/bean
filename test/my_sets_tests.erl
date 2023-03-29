@@ -22,14 +22,6 @@ map_test_() ->
                         [sets:from_list(L) || L <- [[], [1], [1, 2, 3]]])
        end}]}.
 
-foreach_test_() ->
-    {inparallel,
-     [{"Returns the atom `ok`",
-       fun() ->
-          ?assertEqual(ok, my_sets:foreach(fun(X) -> X end, sets:from_list([]))),
-          ?assertEqual(ok, my_sets:foreach(fun(X) -> X end, sets:from_list([1, 2, 3])))
-       end}]}.
-
 any_test_() ->
     {inparallel,
      [{"Returns `true` if there is at least one element for which the predicate is `true`, otherwise returns `false`",

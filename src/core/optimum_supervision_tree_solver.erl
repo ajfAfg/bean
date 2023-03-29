@@ -21,11 +21,7 @@ solve(Dependencies) ->
         begin
             Vertices = maps:keys(Dependencies),
             Edges =
-                lists:flatten(
-                    lists:map(fun(From) ->
-                                 lists:map(fun(To) -> {From, To} end, maps:get(From, Dependencies))
-                              end,
-                              maps:keys(Dependencies))),
+                [{From, To} || From <- maps:keys(Dependencies), To <- maps:get(From, Dependencies)],
             my_digraph:create(Vertices, Edges)
         end,
     transform(Graph, group(Graph)).
@@ -41,7 +37,7 @@ group(Graph) ->
             sets:set(dependency_graph_vertex()),
             sets:set(grouped_graph_vertex())) ->
                grouped_graph().
-group(Graph, GroupedGraph, Targets, GroupedParents) ->
+group(Graph, GroupedGraph, Targets, PrevGroupedTargets) ->
     case sets:size(Targets) =:= 0 of
         true -> GroupedGraph;
         false ->
@@ -49,37 +45,20 @@ group(Graph, GroupedGraph, Targets, GroupedParents) ->
                 digraph_utils:subgraph(Graph,
                                        digraph_utils:reaching(
                                            sets:to_list(Targets), Graph)),
-            Components = components(SubGraph),
             GroupedTargets =
                 my_sets:map(fun(Component) -> sets:intersection(Targets, Component) end,
-                            Components),
-            my_sets:foreach(fun(GroupedVertices) ->
-                               digraph:add_vertex(GroupedGraph, GroupedVertices)
-                            end,
-                            GroupedTargets),
-            my_sets:foreach(fun(GroupedVertices) ->
-                               my_sets:foreach(fun(Parent) ->
-                                                  % NOTE: Twist edges as we grouped up vertices
-                                                  case my_sets:any(fun(V1) ->
-                                                                      my_sets:any(fun(V2) ->
-                                                                                     my_digraph:has_path(Graph,
-                                                                                                         V1,
-                                                                                                         V2)
-                                                                                  end,
-                                                                                  Parent)
-                                                                   end,
-                                                                   GroupedVertices)
-                                                  of
-                                                      true ->
-                                                          digraph:add_edge(GroupedGraph,
-                                                                           GroupedVertices,
-                                                                           Parent);
-                                                      false -> ok
-                                                  end
-                                               end,
-                                               GroupedParents)
-                            end,
-                            GroupedTargets),
+                            components(SubGraph)),
+            % NOTE: Since `foreach` makes the code difficult to read, list comprehensions are used instead.
+            _ = [digraph:add_vertex(GroupedGraph, V) || V <- sets:to_list(GroupedTargets)],
+            _ = [digraph:add_edge(GroupedGraph, From, To)
+                 || {From, To}
+                        <- % NOTE: Twist edges as we grouped up vertices
+                           lists:uniq([{GroupedVertex, PreGroupedVertex}
+                                       || GroupedVertex <- sets:to_list(GroupedTargets),
+                                          PreGroupedVertex <- sets:to_list(PrevGroupedTargets),
+                                          V1 <- sets:to_list(GroupedVertex),
+                                          V2 <- sets:to_list(PreGroupedVertex),
+                                          my_digraph:has_path(Graph, V1, V2)])],
             NewTargets =
                 % NOTE:
                 % There may be unvisited behaviors that are not children of `Targets`
