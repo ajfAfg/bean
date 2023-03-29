@@ -13,12 +13,13 @@
 -ignore_xref(transform/1).
 
 -spec solve(dependency_graph:t()) -> supervision_tree:t().
-solve(Dependencies) ->
+solve(DependencyGraph) ->
     Graph =
         begin
-            Vertices = maps:keys(Dependencies),
+            Vertices = maps:keys(DependencyGraph),
             Edges =
-                [{From, To} || From <- maps:keys(Dependencies), To <- maps:get(From, Dependencies)],
+                [{From, To}
+                 || From <- maps:keys(DependencyGraph), To <- maps:get(From, DependencyGraph)],
             my_digraph:create(Vertices, Edges)
         end,
     transform(Graph, group(Graph)).
