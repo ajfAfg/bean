@@ -8,28 +8,31 @@
 % Therefore, it is sufficient to this test only for type consistency.
 construct_test_() ->
     {inparallel,
-     [{"The Return value type matches the `sup_spec` type",
+     [{"The Return value type matches the `supervisor_spec:t()` type",
        fun() ->
           SupSpecs =
               supervision_tree_constructor:construct([c_modules:first_server(),
                                                       c_modules:second_server(),
                                                       c_modules:third_server()]),
           lists:foreach(fun(SupSpec) ->
-                           ?assertMatch({sup_spec, Name, #{strategy := _}, [_ | _]} when is_atom(Name), SupSpec)
+                           ?assertMatch(#{name := Name,
+                                          sup_flags := #{strategy := _},
+                                          child_specs := [_ | _]} when is_atom(Name),
+                                        SupSpec)
                         end,
                         SupSpecs)
        end},
-      {"The Children in the return value matches the `supervisor:child_spec` type",
+      {"The `child_specs` in the return value matches the `[supervisor:child_spec()]` type",
        fun() ->
-          [{_, _, _, Children} | _] =
+          [#{child_specs := ChildSpecs} | _] =
               supervision_tree_constructor:construct([c_modules:first_server(),
                                                       c_modules:second_server(),
                                                       c_modules:third_server()]),
-          lists:foreach(fun(Child) ->
+          lists:foreach(fun(Spec) ->
                            ?assertMatch(#{id := _,
                                           start := _,
                                           type := _},
-                                        Child)
+                                        Spec)
                         end,
-                        Children)
+                        ChildSpecs)
        end}]}.

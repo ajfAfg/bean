@@ -2,16 +2,7 @@
 
 -export([construct/1]).
 
--export_type([sup_spec/0]).
-
--record(sup_spec,
-        {name :: atom(),
-         sup_flags :: supervisor:sup_flags(),
-         child_specs :: [supervisor:child_spec()]}).
-
--type sup_spec() :: #sup_spec{}.
-
--spec construct([cerl:c_module()]) -> [sup_spec()].
+-spec construct([cerl:c_module()]) -> [supervisor_spec:t()].
 construct(CModules) ->
     SupervisionTree =
         optimum_supervision_tree_solver:solve(
@@ -22,21 +13,20 @@ construct(CModules) ->
 
 -spec convert_sup_specs_from_grouped_dependencies(supervision_tree:child(),
                                                   sup_names(),
-                                                  [sup_spec()]) ->
-                                                     [sup_spec()].
+                                                  [supervisor_spec:t()]) ->
+                                                     [supervisor_spec:t()].
 convert_sup_specs_from_grouped_dependencies(Name, _, Acc) when is_atom(Name) -> Acc;
 convert_sup_specs_from_grouped_dependencies({Strategy, Children} = SupervisionTree,
                                             Names,
                                             Acc) ->
     SupSpec =
-        #sup_spec{name = maps:get(SupervisionTree, Names),
-                  sup_flags =
-                      #{strategy => Strategy,
-                        % TODO: Give the debug information only when running the benchmark to measure the time to restart gen_servers
-                        intensity => 1000,
-                        period => 1},
-                  child_specs =
-                      lists:map(fun(Child) -> create_child_spec(Child, Names) end, Children)},
+        #{name => maps:get(SupervisionTree, Names),
+          sup_flags =>
+              #{strategy => Strategy,
+                % TODO: Give the debug information only when running the benchmark to measure the time to restart gen_servers
+                intensity => 1000,
+                period => 1},
+          child_specs => lists:map(fun(Child) -> create_child_spec(Child, Names) end, Children)},
     lists:foldl(fun(Child, A) -> convert_sup_specs_from_grouped_dependencies(Child, Names, A)
                 end,
                 [SupSpec | Acc],

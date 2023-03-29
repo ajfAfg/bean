@@ -56,7 +56,9 @@ generate_supervisor(_App) ->
         "ChildSpecs = ~p,"
         "{ok, {SupFlags, ChildSpecs}}.~n",
     SupStrsWithName =
-        lists:map(fun({sup_spec, Name, SupFlags, ChildSpecs}) ->
+        lists:map(fun(#{name := Name,
+                        sup_flags := SupFlags,
+                        child_specs := ChildSpecs}) ->
                      {Name, io_lib:format(Format, [Name, SupFlags, ChildSpecs])}
                   end,
                   SupSpecs),
