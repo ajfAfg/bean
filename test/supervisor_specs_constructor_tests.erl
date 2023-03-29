@@ -1,4 +1,4 @@
--module(supervision_tree_constructor_tests).
+-module(supervisor_specs_constructor_tests).
 
 -include_lib("eunit/include/eunit.hrl").
 
@@ -11,7 +11,7 @@ construct_test_() ->
      [{"The Return value type matches the `supervisor_spec:t()` type",
        fun() ->
           SupSpecs =
-              supervision_tree_constructor:construct([c_modules:first_server(),
+              supervisor_specs_constructor:construct([c_modules:first_server(),
                                                       c_modules:second_server(),
                                                       c_modules:third_server()]),
           lists:foreach(fun(SupSpec) ->
@@ -25,7 +25,7 @@ construct_test_() ->
       {"The `child_specs` in the return value matches the `[supervisor:child_spec()]` type",
        fun() ->
           [#{child_specs := ChildSpecs} | _] =
-              supervision_tree_constructor:construct([c_modules:first_server(),
+              supervisor_specs_constructor:construct([c_modules:first_server(),
                                                       c_modules:second_server(),
                                                       c_modules:third_server()]),
           lists:foreach(fun(Spec) ->

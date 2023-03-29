@@ -45,7 +45,7 @@ generate_supervisor(_App) ->
                      CModule
                   end,
                   Modules),
-    SupSpecs = supervision_tree_constructor:construct(CModules),
+    SupSpecs = supervisor_specs_constructor:construct(CModules),
     Format =
         "-module('~s').~n"
         "-behavior(supervisor).~n"

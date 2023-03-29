@@ -1,4 +1,4 @@
--module(supervision_tree_constructor).
+-module(supervisor_specs_constructor).
 
 -export([construct/1]).
 
