@@ -45,7 +45,10 @@ generate_supervisor(_App) ->
                      CModule
                   end,
                   Modules),
-    SupSpecs = supervision_tree_constructor:construct(CModules),
+    SupSpecs =
+        supervisor_specs_constructor:construct(
+            optimum_supervision_tree_solver:solve(
+                dependency_extractor:extract(CModules))),
     Format =
         "-module('~s').~n"
         "-behavior(supervisor).~n"
@@ -56,7 +59,9 @@ generate_supervisor(_App) ->
         "ChildSpecs = ~p,"
         "{ok, {SupFlags, ChildSpecs}}.~n",
     SupStrsWithName =
-        lists:map(fun({sup_spec, Name, SupFlags, ChildSpecs}) ->
+        lists:map(fun(#{name := Name,
+                        sup_flags := SupFlags,
+                        child_specs := ChildSpecs}) ->
                      {Name, io_lib:format(Format, [Name, SupFlags, ChildSpecs])}
                   end,
                   SupSpecs),

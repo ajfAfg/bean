@@ -2,23 +2,19 @@
 % To increase the accuracy of the dependencies to be extracted,
 % symbolic execution should be performed.
 
--module(gen_server_dependencies).
+-module(dependency_extractor).
 
--export([extract_dependencies/1]).
-
--export_type([dependencies/0]).
-
--type dependencies() :: #{atom() => [atom()]}.
+-export([extract/1]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% extract_dependencies/1
+%%% extract/1
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -record(fun_signature, {name :: atom(), arity :: non_neg_integer()}).
 -record(fun_def, {fun_signature :: #fun_signature{}, body :: cerl:cerl()}).
 
--spec extract_dependencies([cerl:c_module()]) -> dependencies().
-extract_dependencies([]) -> #{};
-extract_dependencies([CModule | CModules]) ->
+-spec extract([cerl:c_module()]) -> dependency_graph:t().
+extract([]) -> #{};
+extract([CModule | CModules]) ->
     Dependency =
         case c_gen_server:is_gen_server(CModule) of
             true ->
@@ -28,10 +24,10 @@ extract_dependencies([CModule | CModules]) ->
                 FunDefs =
                     remove_functions_other_than_gen_server_callback_functions(take_functions(CModule)),
                 Bodies = lists:map(fun(#fun_def{body = Body}) -> Body end, FunDefs),
-                #{ModuleName => lists:foldl(fun extract_dependencies_from_fun_body/2, [], Bodies)};
+                #{ModuleName => lists:foldl(fun extract_from_fun_body/2, [], Bodies)};
             false -> #{}
         end,
-    maps:merge(Dependency, extract_dependencies(CModules)).
+    maps:merge(Dependency, extract(CModules)).
 
 -spec take_functions(cerl:c_module()) -> [#fun_def{}].
 take_functions(CModule) ->
@@ -63,16 +59,16 @@ get_gen_server_callback_functions() ->
      #fun_signature{name = init, arity = 1},
      #fun_signature{name = terminate, arity = 2}].
 
--spec extract_dependencies_from_fun_body(cerl:cerl(), [atom()]) -> [atom()].
-extract_dependencies_from_fun_body({c_alias, _, _, _}, Acc) ->
+-spec extract_from_fun_body(cerl:cerl(), [atom()]) -> [atom()].
+extract_from_fun_body({c_alias, _, _, _}, Acc) ->
     Acc; % TODO: Support
-extract_dependencies_from_fun_body({c_apply, _, _, _}, Acc) ->
+extract_from_fun_body({c_apply, _, _, _}, Acc) ->
     Acc; % TODO: Support
-extract_dependencies_from_fun_body({c_binary, _, _}, Acc) ->
+extract_from_fun_body({c_binary, _, _}, Acc) ->
     Acc; % TODO: Support
-extract_dependencies_from_fun_body({c_bitstr, _, _, _, _, _, _}, Acc) ->
+extract_from_fun_body({c_bitstr, _, _, _, _, _, _}, Acc) ->
     Acc; % TODO: Support
-extract_dependencies_from_fun_body({c_call, _, Module, Name, Args}, Acc) ->
+extract_from_fun_body({c_call, _, Module, Name, Args}, Acc) ->
     % TODO: Assume that `Module`, `Name` and the first element of `Args` are `c_literal()` type
     % TODO: Support `gen_server:stop/1` and so on
     Fun = fun ({c_literal, _, gen_server},
@@ -89,46 +85,40 @@ extract_dependencies_from_fun_body({c_call, _, Module, Name, Args}, Acc) ->
         {some, GenServerName} -> [GenServerName | Acc];
         none -> Acc
     end;
-extract_dependencies_from_fun_body({c_case, _, _, Clauses}, Acc) ->
-    lists:foldl(fun(Clause, A) -> extract_dependencies_from_fun_body(Clause, A) end,
-                Acc,
-                Clauses);
-extract_dependencies_from_fun_body({c_catch, _, Body}, Acc) ->
-    extract_dependencies_from_fun_body(Body, Acc);
-extract_dependencies_from_fun_body({c_clause, _, _, _, Body}, Acc) ->
-    extract_dependencies_from_fun_body(Body, Acc);
-extract_dependencies_from_fun_body({c_cons, _, _}, Acc) ->
+extract_from_fun_body({c_case, _, _, Clauses}, Acc) ->
+    lists:foldl(fun(Clause, A) -> extract_from_fun_body(Clause, A) end, Acc, Clauses);
+extract_from_fun_body({c_catch, _, Body}, Acc) -> extract_from_fun_body(Body, Acc);
+extract_from_fun_body({c_clause, _, _, _, Body}, Acc) -> extract_from_fun_body(Body, Acc);
+extract_from_fun_body({c_cons, _, _}, Acc) ->
     Acc; % TODO: Support
-extract_dependencies_from_fun_body({c_fun, _, _}, Acc) ->
+extract_from_fun_body({c_fun, _, _}, Acc) ->
     Acc; % TODO: Support
-extract_dependencies_from_fun_body({c_let, _, _, Arg, Body}, Acc) ->
-    Acc2 = extract_dependencies_from_fun_body(Arg, Acc),
-    extract_dependencies_from_fun_body(Body, Acc2);
-extract_dependencies_from_fun_body({c_letrec, _, _, _}, Acc) ->
+extract_from_fun_body({c_let, _, _, Arg, Body}, Acc) ->
+    Acc2 = extract_from_fun_body(Arg, Acc),
+    extract_from_fun_body(Body, Acc2);
+extract_from_fun_body({c_letrec, _, _, _}, Acc) ->
     Acc; % TODO: Support
-% extract_dependencies_from_fun_body({c_literal, _, _}, ModuleName, Acc) ->
+% extract_from_fun_body({c_literal, _, _}, ModuleName, Acc) ->
 %     Acc; % TODO: Support
-extract_dependencies_from_fun_body({c_map, _, _, _, _}, Acc) ->
+extract_from_fun_body({c_map, _, _, _, _}, Acc) ->
     Acc; % TODO: Support
-extract_dependencies_from_fun_body({c_map_pair, _, _, _, _}, Acc) ->
+extract_from_fun_body({c_map_pair, _, _, _, _}, Acc) ->
     Acc; % TODO: Support
-extract_dependencies_from_fun_body({c_module, _, _, _, _, _}, Acc) ->
+extract_from_fun_body({c_module, _, _, _, _, _}, Acc) ->
     Acc; % NOTE: Probably no match
-extract_dependencies_from_fun_body({c_primop, _, _, _}, Acc) ->
+extract_from_fun_body({c_primop, _, _, _}, Acc) ->
     Acc; % NOTE: Ignore
-extract_dependencies_from_fun_body({c_receive, _, Clauses, _, _}, Acc) ->
-    lists:foldl(fun(Clause, A) -> extract_dependencies_from_fun_body(Clause, A) end,
-                Acc,
-                Clauses);
-extract_dependencies_from_fun_body({c_seq, _, Arg, Body}, Acc) ->
-    Acc2 = extract_dependencies_from_fun_body(Arg, Acc),
-    extract_dependencies_from_fun_body(Body, Acc2);
-extract_dependencies_from_fun_body({c_try, _, _, _, _, _, _}, Acc) ->
+extract_from_fun_body({c_receive, _, Clauses, _, _}, Acc) ->
+    lists:foldl(fun(Clause, A) -> extract_from_fun_body(Clause, A) end, Acc, Clauses);
+extract_from_fun_body({c_seq, _, Arg, Body}, Acc) ->
+    Acc2 = extract_from_fun_body(Arg, Acc),
+    extract_from_fun_body(Body, Acc2);
+extract_from_fun_body({c_try, _, _, _, _, _, _}, Acc) ->
     Acc; % TODO: Support
-extract_dependencies_from_fun_body({c_tuple, _, _}, Acc) ->
+extract_from_fun_body({c_tuple, _, _}, Acc) ->
     Acc; % TODO: Support
-extract_dependencies_from_fun_body({c_values, _, _}, Acc) ->
+extract_from_fun_body({c_values, _, _}, Acc) ->
     Acc; % TODO: Support
-extract_dependencies_from_fun_body({c_var, _, _}, Acc) ->
+extract_from_fun_body({c_var, _, _}, Acc) ->
     Acc; % TODO: Support
-extract_dependencies_from_fun_body(_, Acc) -> Acc.
+extract_from_fun_body(_, Acc) -> Acc.
