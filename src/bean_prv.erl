@@ -48,7 +48,7 @@ generate_supervisor(_App) ->
     SupSpecs =
         supervisor_specs_constructor:construct(
             optimum_supervision_tree_solver:solve(
-                dependency_extractor:extract_dependencies(CModules))),
+                dependency_extractor:extract(CModules))),
     Format =
         "-module('~s').~n"
         "-behavior(supervisor).~n"
