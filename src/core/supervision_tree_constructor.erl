@@ -15,7 +15,7 @@
 construct(CModules) ->
     SupervisionTree =
         optimum_supervision_tree_solver:solve(
-            gen_server_dependencies:extract_dependencies(CModules)),
+            dependency_extractor:extract_dependencies(CModules)),
     convert_sup_specs_from_grouped_dependencies(SupervisionTree,
                                                 create_sup_names(SupervisionTree),
                                                 []).

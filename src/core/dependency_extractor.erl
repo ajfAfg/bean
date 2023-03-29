@@ -2,7 +2,7 @@
 % To increase the accuracy of the dependencies to be extracted,
 % symbolic execution should be performed.
 
--module(gen_server_dependencies).
+-module(dependency_extractor).
 
 -export([extract_dependencies/1]).
 

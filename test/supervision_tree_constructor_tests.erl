@@ -3,7 +3,7 @@
 -include_lib("eunit/include/eunit.hrl").
 
 % NOTE:
-% Extracting dependencies from `gen_server` is tested in `gen_server_dependencies_tests.erl`,
+% Extracting dependencies from `gen_server` is tested in `dependency_extractor_tests.erl`,
 % and generating the supervision tree from the dependencies is tested in `optimum_supervision_tree_solver_tests`.
 % Therefore, it is sufficient to this test only for type consistency.
 construct_test_() ->
