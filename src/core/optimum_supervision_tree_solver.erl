@@ -7,11 +7,6 @@
 -type grouped_graph() :: digraph:graph().
 -type grouped_graph_vertex() :: sets:set(dependency_graph_vertex()).
 
-% TODO: Prevent the error from occurring in the first place in some way.
--ignore_xref(group/1).
--ignore_xref(sort_by_postorder/2).
--ignore_xref(transform/1).
-
 -spec solve(dependency_graph:t()) -> supervision_tree:t().
 solve(DependencyGraph) ->
     Graph =
