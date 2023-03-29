@@ -75,15 +75,12 @@ sort_by_postorder(Vertices, Graph) ->
 
 -spec transform(dependency_graph(), grouped_graph()) -> supervision_tree:t().
 transform(Graph, GroupedGraph) ->
-    case lists:filter(fun(V) -> digraph:out_degree(GroupedGraph, V) =:= 0 end,
-                      digraph:vertices(GroupedGraph))
+    case [V || V <- digraph:vertices(GroupedGraph), digraph:out_degree(GroupedGraph, V) =:= 0]
     of
         [] -> throw(impossible);
         [GroupedVertex] -> transform(Graph, GroupedGraph, GroupedVertex);
         GroupedVertices ->
-            {one_for_one,
-             lists:map(fun(GroupedVertex) -> transform(Graph, GroupedGraph, GroupedVertex) end,
-                       GroupedVertices)}
+            {one_for_one, [transform(Graph, GroupedGraph, V) || V <- GroupedVertices]}
     end.
 
 -spec transform(dependency_graph(), grouped_graph(), grouped_graph_vertex()) ->
@@ -93,7 +90,7 @@ transform(Graph, GroupedGraph, GroupedVertex) ->
         case digraph:in_neighbours(GroupedGraph, GroupedVertex) of
             [] -> nil;
             [V] -> transform(Graph, GroupedGraph, V);
-            Vs -> {one_for_one, lists:map(fun(V) -> transform(Graph, GroupedGraph, V) end, Vs)}
+            Vs -> {one_for_one, [transform(Graph, GroupedGraph, V) || V <- Vs]}
         end,
     Strategy =
         case my_sets:any(fun(Set) -> sets:size(Set) > 0 end,
