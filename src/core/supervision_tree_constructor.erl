@@ -20,11 +20,10 @@ construct(CModules) ->
                                                 create_sup_names(GroupedDependencies),
                                                 []).
 
--spec
-    convert_sup_specs_from_grouped_dependencies(gen_server_dependencies:grouped_dependencies(),
-                                                sup_names(),
-                                                [sup_spec()]) ->
-                                                   [sup_spec()].
+-spec convert_sup_specs_from_grouped_dependencies(supervision_tree:t(),
+                                                  sup_names(),
+                                                  [sup_spec()]) ->
+                                                     [sup_spec()].
 convert_sup_specs_from_grouped_dependencies(GenServer, _, Acc) when is_atom(GenServer) ->
     Acc;
 convert_sup_specs_from_grouped_dependencies({Strategy, Deps2} = Deps1, Names, Acc) ->
@@ -40,9 +39,9 @@ convert_sup_specs_from_grouped_dependencies({Strategy, Deps2} = Deps1, Names, Ac
                 [SupSpec | Acc],
                 Deps2).
 
--type sup_names() :: #{gen_server_dependencies:grouped_dependencies() => atom()}.
+-type sup_names() :: #{supervision_tree:t() => atom()}.
 
--spec create_sup_names(gen_server_dependencies:grouped_dependencies()) -> sup_names().
+-spec create_sup_names(supervision_tree:t()) -> sup_names().
 create_sup_names({_, Deps2} = Deps1) ->
     % NOTE: The name of root in a supervision tree is `bean`.
     lists:foldl(fun maps:merge/2,
@@ -60,9 +59,7 @@ make_name() ->
     erlang:list_to_atom(
         erlang:ref_to_list(make_ref())).
 
--spec create_child_spec(gen_server_dependencies:grouped_dependencies() | atom(),
-                        sup_names()) ->
-                           supervisor:child_spec().
+-spec create_child_spec(supervision_tree:child(), sup_names()) -> supervisor:child_spec().
 create_child_spec(GenServer, _) when is_atom(GenServer) ->
     #{id => GenServer,
       start =>

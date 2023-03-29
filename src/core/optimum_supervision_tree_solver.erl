@@ -2,20 +2,17 @@
 
 -export([solve/1, group/1, sort_by_postorder/2, transform/2]).
 
--export_type([supervision_tree/0]).
-
--type supervision_tree() :: {supervisor:strategy(), [supervision_tree() | atom()]}.
 -type dependency_graph() :: digraph:graph().
 -type dependency_graph_vertex() :: atom().
 -type grouped_graph() :: digraph:graph().
--type grouped_graph_vertex() :: sets:set(atom()).
+-type grouped_graph_vertex() :: sets:set(dependency_graph_vertex()).
 
 % TODO: Prevent the error from occurring in the first place in some way.
 -ignore_xref(group/1).
 -ignore_xref(sort_by_postorder/2).
 -ignore_xref(transform/1).
 
--spec solve(gen_server_dependencies:dependencies()) -> supervision_tree().
+-spec solve(dependency_graph:t()) -> supervision_tree:t().
 solve(Dependencies) ->
     Graph =
         begin
@@ -75,7 +72,7 @@ group(Graph, GroupedGraph, Targets, PrevGroupedTargets) ->
 sort_by_postorder(Vertices, Graph) ->
     lists:filter(fun(V) -> lists:member(V, Vertices) end, digraph_utils:postorder(Graph)).
 
--spec transform(dependency_graph(), grouped_graph()) -> supervision_tree().
+-spec transform(dependency_graph(), grouped_graph()) -> supervision_tree:t().
 transform(Graph, GroupedGraph) ->
     case lists:filter(fun(V) -> digraph:out_degree(GroupedGraph, V) =:= 0 end,
                       digraph:vertices(GroupedGraph))
@@ -89,7 +86,7 @@ transform(Graph, GroupedGraph) ->
     end.
 
 -spec transform(dependency_graph(), grouped_graph(), grouped_graph_vertex()) ->
-                   supervision_tree().
+                   supervision_tree:t().
 transform(Graph, GroupedGraph, GroupedVertex) ->
     RightChild =
         case digraph:in_neighbours(GroupedGraph, GroupedVertex) of

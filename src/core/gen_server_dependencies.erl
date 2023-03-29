@@ -6,17 +6,13 @@
 
 -export([extract_dependencies/1]).
 
--export_type([dependencies/0]).
-
--type dependencies() :: #{atom() => [atom()]}.
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% extract_dependencies/1
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -record(fun_signature, {name :: atom(), arity :: non_neg_integer()}).
 -record(fun_def, {fun_signature :: #fun_signature{}, body :: cerl:cerl()}).
 
--spec extract_dependencies([cerl:c_module()]) -> dependencies().
+-spec extract_dependencies([cerl:c_module()]) -> dependency_graph:t().
 extract_dependencies([]) -> #{};
 extract_dependencies([CModule | CModules]) ->
     Dependency =
