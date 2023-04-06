@@ -96,11 +96,11 @@ group_test_() ->
           lists:foreach(fun(X) -> digraph:add_vertex(G, X) end, lists:seq(1, 7)),
           lists:foreach(fun({V1, V2}) -> digraph:add_edge(G, V1, V2) end,
                         [{1, 3}, {2, 3}, {3, 4}, {3, 5}, {6, 7}]),
-          ?assertEqual(sets:from_list([sets:from_list(V)
-                                       || V <- [[1], [2], [3], [4, 5], [6], [7]]]),
-                       sets:from_list(
-                           digraph:vertices(
-                               optimum_supervision_tree_solver:group(G))))
+          ?assert(my_sets:equal(
+                      sets:from_list([sets:from_list(V) || V <- [[1], [2], [3], [4, 5], [6], [7]]]),
+                      sets:from_list(
+                          digraph:vertices(
+                              optimum_supervision_tree_solver:group(G)))))
        end}]}.
 
 sort_by_postorder_test_() ->
