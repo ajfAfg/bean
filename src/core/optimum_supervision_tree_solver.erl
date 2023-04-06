@@ -21,7 +21,7 @@ solve(DependencyGraph) ->
 
 -spec group(dependency_graph()) -> grouped_graph().
 group(Graph) ->
-    Pred = fun(V) -> get_strong_component(Graph, V) =:= reachable([V], Graph) end,
+    Pred = fun(V) -> my_sets:equal(get_strong_component(Graph, V), reachable([V], Graph)) end,
     Targets = sets:filter(Pred, vertices(Graph)),
     group(Graph, digraph:new(), Targets, sets:new()).
 
