@@ -23,5 +23,7 @@ jobs:
         run: rebar3 compile
       - name: Check statically
         run: rebar3 check
-      - name: Run tests
+      - name: Run sample-based-tests
         run: rebar3 do eunit, ct
+      - name: Run property-based-tests
+        run: rebar3 proper

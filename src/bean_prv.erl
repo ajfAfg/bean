@@ -45,33 +45,36 @@ generate_supervisor(_App) ->
                      CModule
                   end,
                   Modules),
-    SupSpecs =
-        supervisor_specs_constructor:construct(
-            optimum_supervision_tree_solver:solve(
-                dependency_extractor:extract(CModules))),
-    Format =
-        "-module('~s').~n"
-        "-behavior(supervisor).~n"
-        "-export([init/1]).~n"
-        "~n"
-        "init(_Args) ->"
-        "SupFlags = ~p,"
-        "ChildSpecs = ~p,"
-        "{ok, {SupFlags, ChildSpecs}}.~n",
-    SupStrsWithName =
-        lists:map(fun(#{name := Name,
-                        sup_flags := SupFlags,
-                        child_specs := ChildSpecs}) ->
-                     {Name, io_lib:format(Format, [Name, SupFlags, ChildSpecs])}
-                  end,
-                  SupSpecs),
-    file:make_dir("src/"),
-    file:make_dir("src/bean/"),
-    lists:foreach(fun({Name, SupStr}) ->
-                     file:write_file(
-                         io_lib:format("src/bean/~s.erl", [Name]), SupStr)
-                  end,
-                  SupStrsWithName).
+    case dependency_extractor:extract(CModules) of
+        none -> ok;
+        {some, DependencyGraph} ->
+            SupSpecs =
+                supervisor_specs_constructor:construct(
+                    optimum_supervision_tree_solver:solve(DependencyGraph)),
+            Format =
+                "-module('~s').~n"
+                "-behavior(supervisor).~n"
+                "-export([init/1]).~n"
+                "~n"
+                "init(_Args) ->"
+                "SupFlags = ~p,"
+                "ChildSpecs = ~p,"
+                "{ok, {SupFlags, ChildSpecs}}.~n",
+            SupStrsWithName =
+                lists:map(fun(#{name := Name,
+                                sup_flags := SupFlags,
+                                child_specs := ChildSpecs}) ->
+                             {Name, io_lib:format(Format, [Name, SupFlags, ChildSpecs])}
+                          end,
+                          SupSpecs),
+            file:make_dir("src/"),
+            file:make_dir("src/bean/"),
+            lists:foreach(fun({Name, SupStr}) ->
+                             file:write_file(
+                                 io_lib:format("src/bean/~s.erl", [Name]), SupStr)
+                          end,
+                          SupStrsWithName)
+    end.
 
 find_source_files(Dir) ->
     filelib:fold_files(Dir, ".*\.erl", true, fun(X, Acc) -> [X | Acc] end, []).

@@ -84,18 +84,10 @@ solve_test_() ->
 
 group_test_() ->
     {inparallel,
-     [{"Return a different instance from the given graph",
+     [{"Return grouped vertices",
        fun() ->
-          G = digraph:new(),
-          GroupedGraph = optimum_supervision_tree_solver:group(G),
-          ?assertNotEqual(G, GroupedGraph)
-       end},
-      {"Return grouped vertices",
-       fun() ->
-          G = digraph:new(),
-          lists:foreach(fun(X) -> digraph:add_vertex(G, X) end, lists:seq(1, 7)),
-          lists:foreach(fun({V1, V2}) -> digraph:add_edge(G, V1, V2) end,
-                        [{1, 3}, {2, 3}, {3, 4}, {3, 5}, {6, 7}]),
+          G = my_digraph:create(
+                  lists:seq(1, 7), [{1, 3}, {2, 3}, {3, 4}, {3, 5}, {6, 7}]),
           ?assert(my_sets:equal(
                       sets:from_list([sets:from_list(V) || V <- [[1], [2], [3], [4, 5], [6], [7]]]),
                       sets:from_list(
