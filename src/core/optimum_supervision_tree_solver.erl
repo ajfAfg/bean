@@ -2,32 +2,23 @@
 
 -export([solve/1, group/1, sort_by_postorder/2, transform/2]).
 
--type dependency_graph() :: digraph:graph().
--type dependency_graph_vertex() :: atom().
 -type grouped_graph() :: digraph:graph().
--type grouped_graph_vertex() :: sets:set(dependency_graph_vertex()).
+-type grouped_graph_vertex() :: sets:set(dependency_digraph:vertex()).
 
 -spec solve(dependency_graph:t()) -> supervision_tree:t().
 solve(DependencyGraph) ->
-    Graph =
-        begin
-            Vertices = maps:keys(DependencyGraph),
-            Edges =
-                [{From, To}
-                 || From <- maps:keys(DependencyGraph), To <- maps:get(From, DependencyGraph)],
-            my_digraph:create(Vertices, Edges)
-        end,
+    Graph = dependency_digraph:from_dependency_graph(DependencyGraph),
     transform(Graph, group(Graph)).
 
--spec group(dependency_graph()) -> grouped_graph().
+-spec group(dependency_digraph:t()) -> grouped_graph().
 group(Graph) ->
     Pred = fun(V) -> my_sets:equal(get_strong_component(Graph, V), reachable([V], Graph)) end,
     Targets = sets:filter(Pred, vertices(Graph)),
     group(Graph, digraph:new(), Targets, sets:new()).
 
--spec group(dependency_graph(),
+-spec group(dependency_digraph:t(),
             grouped_graph(),
-            sets:set(dependency_graph_vertex()),
+            sets:set(dependency_digraph:vertex()),
             sets:set(grouped_graph_vertex())) ->
                grouped_graph().
 group(Graph, GroupedGraph, Targets, PrevGroupedTargets) ->
@@ -68,7 +59,7 @@ group(Graph, GroupedGraph, Targets, PrevGroupedTargets) ->
 sort_by_postorder(Vertices, Graph) ->
     lists:filter(fun(V) -> lists:member(V, Vertices) end, digraph_utils:postorder(Graph)).
 
--spec transform(dependency_graph(), grouped_graph()) -> supervision_tree:t().
+-spec transform(dependency_digraph:t(), grouped_graph()) -> supervision_tree:t().
 transform(Graph, GroupedGraph) ->
     case [V || V <- digraph:vertices(GroupedGraph), digraph:out_degree(GroupedGraph, V) =:= 0]
     of
@@ -78,7 +69,7 @@ transform(Graph, GroupedGraph) ->
             {one_for_one, [transform(Graph, GroupedGraph, V) || V <- GroupedVertices]}
     end.
 
--spec transform(dependency_graph(), grouped_graph(), grouped_graph_vertex()) ->
+-spec transform(dependency_digraph:t(), grouped_graph(), grouped_graph_vertex()) ->
                    supervision_tree:t().
 transform(Graph, GroupedGraph, GroupedVertex) ->
     RightChild =
