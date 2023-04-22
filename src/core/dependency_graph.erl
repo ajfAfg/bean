@@ -3,4 +3,4 @@
 -export_type([t/0]).
 
 -type vertex() :: behavior:name().
--type t() :: #{vertex() => [vertex()]}.
+-type t() :: #{vertex() := [vertex()]}.

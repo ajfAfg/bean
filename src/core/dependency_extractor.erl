@@ -12,9 +12,17 @@
 -record(fun_signature, {name :: atom(), arity :: non_neg_integer()}).
 -record(fun_def, {fun_signature :: #fun_signature{}, body :: cerl:cerl()}).
 
--spec extract([cerl:c_module()]) -> dependency_graph:t().
-extract([]) -> #{};
-extract([CModule | CModules]) ->
+-spec extract([cerl:c_module()]) -> option:t(dependency_graph:t()).
+extract(CModules) ->
+    G = extract_(CModules),
+    case map_size(G) =:= 0 of
+        true -> none;
+        false -> {some, G}
+    end.
+
+-spec extract_([cerl:c_module()]) -> #{behavior:name() => [behavior:name()]}.
+extract_([]) -> #{};
+extract_([CModule | CModules]) ->
     Dependency =
         case c_gen_server:is_gen_server(CModule) of
             true ->
@@ -27,7 +35,7 @@ extract([CModule | CModules]) ->
                 #{ModuleName => lists:foldl(fun extract_from_fun_body/2, [], Bodies)};
             false -> #{}
         end,
-    maps:merge(Dependency, extract(CModules)).
+    maps:merge(Dependency, extract_(CModules)).
 
 -spec take_functions(cerl:c_module()) -> [#fun_def{}].
 take_functions(CModule) ->
