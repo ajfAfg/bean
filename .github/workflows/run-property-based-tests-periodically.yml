@@ -3,7 +3,7 @@ name: Run property-based tests periodically
 on:
   schedule:
     # NOTE: Every day at 00:00 (JST)
-    - cron: '0 9 * * *'
+    - cron: '0 15 * * *'
 
 jobs:
   test:
