@@ -11,7 +11,7 @@ vertices_and_edges() ->
          % NOTE:
          % I want to be sure to retrieve an element from the list during testing,
          % so I do not want an empty list.
-         non_empty(list(any())),
+         non_empty(list(random_type())),
          begin
              Vertices = lists:usort(List),
              {Vertices, create_edges_randomly(Vertices)}

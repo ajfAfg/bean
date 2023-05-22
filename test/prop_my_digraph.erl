@@ -8,7 +8,7 @@
 
 vertices_and_edges() ->
     ?LET(List,
-         list(any()),
+         list(random_type()),
          begin
              Vertices = lists:usort(List),
              {Vertices, create_edges_randomly(Vertices)}

@@ -2,13 +2,13 @@
 
 -compile(export_all).
 
--import(proper_helper, [random_type/0]).
+-import(proper_helper, [limited_atom/0]).
 
 -include_lib("proper/include/proper.hrl").
 
 dependency_graph() ->
     ?LET(List,
-         non_empty(list(atom())),
+         non_empty(list(limited_atom())),
          begin
              Vertices = lists:uniq(List),
              lists:foldl(fun(From, Acc) ->
