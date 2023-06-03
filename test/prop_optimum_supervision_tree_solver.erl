@@ -19,122 +19,71 @@ dependency_graph() ->
                          Vertices)
          end).
 
-dependency_digraph() ->
-    {'$call', dependency_digraph, from_dependency_graph, [dependency_graph()]}.
+dependency_graph_to_connected_dag(G) ->
+    Digraph =
+        digraph_utils:condensation(
+            dependency_digraph:from_dependency_graph(G)),
+    digraph_utils:subgraph(Digraph, hd(digraph_utils:components(Digraph))).
+
+dependency_connected_dag() ->
+    {'$call', ?MODULE, dependency_graph_to_connected_dag, [dependency_graph()]}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% optimum_supervision_tree_solver:group/1 %%%
+%%% optimum_supervision_tree_solver:solve/1 %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-prop_group1(doc) -> "No vertex is lost".
+prop_solve(doc) ->
+    "When a process is restarted, the processes that depend on it are also restarted".
 
-prop_group1() ->
+prop_solve() ->
     ?FORALL(Graph,
-            dependency_digraph(),
+            dependency_graph(),
             begin
-                GroupedGraph = optimum_supervision_tree_solver:group(Graph),
-                lists:sort(
-                    digraph:vertices(Graph))
-                =:= lists:sort(
-                        lists:flatten([sets:to_list(S) || S <- digraph:vertices(GroupedGraph)]))
-            end).
-
-prop_group2(doc) -> "No edge is lost".
-
-prop_group2() ->
-    ?FORALL(Graph,
-            dependency_digraph(),
-            begin
-                GroupedGraph = optimum_supervision_tree_solver:group(Graph),
-                lists:all(fun({GV1, GV2}) ->
-                             lists:any(fun({V1, V2}) -> my_digraph:has_path(Graph, V1, V2) end,
-                                       [{V1, V2}
-                                        || V1 <- sets:to_list(GV1), V2 <- sets:to_list(GV2)])
+                Digraph = dependency_digraph:from_dependency_graph(Graph),
+                lists:all(fun(V) ->
+                             digraph_utils:reaching([V], Digraph)
+                             -- lists:sort(take_restart_processes(V,
+                                                                  optimum_supervision_tree_solver:solve(Graph)))
+                             =:= []
                           end,
-                          [{GV1, GV2}
-                           || GE <- digraph:edges(GroupedGraph),
-                              {_, GV1, GV2, _} <- [digraph:edge(GroupedGraph, GE)]])
+                          digraph:vertices(Digraph))
             end).
 
-prop_group3(doc) -> "Return a different instance from the given graph".
+take_restart_processes(Target, {Strategy, Children} = Tree) ->
+    case lists:member(Target, Children) of
+        false ->
+            lists:flatten(
+                lists:map(fun(Child) -> take_restart_processes(Target, Child) end, Children));
+        true ->
+            case Strategy of
+                one_for_one -> [Target];
+                one_for_all -> take_restart_processes(Tree);
+                rest_for_one ->
+                    {_, Children_} = lists:splitwith(fun(C) -> C =/= Target end, Children),
+                    lists:flatten(
+                        lists:map(fun take_restart_processes/1, Children_))
+            end
+    end;
+take_restart_processes(_, _) -> [].
 
-prop_group3() ->
-    ?FORALL(Graph,
-            dependency_digraph(),
-            Graph =/= optimum_supervision_tree_solver:group(Graph)).
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% optimum_supervision_tree_solver:transform/2 %%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-prop_transform1(doc) ->
-    "The strategy of the parent of the vertex contained in a cyclic strongly component in the graph is `one_for_all`".
-
-prop_transform1() ->
-    ?FORALL(Graph,
-            dependency_digraph(),
-            begin
-                Tree =
-                    optimum_supervision_tree_solver:transform(Graph,
-                                                              optimum_supervision_tree_solver:group(Graph)),
-                ?FORALL({Strategy, Children},
-                        exactly(hd(my_lists:shuffle(take_strategy_and_names(Tree)))),
-                        ?FORALL(Child,
-                                exactly(hd(my_lists:shuffle(Children))),
-                                begin
-                                    Cscc =
-                                        my_digraph_utils:get_cyclic_strong_component(Graph, Child),
-                                    ?IMPLIES(is_list(Cscc) andalso Cscc -- Children =:= [],
-                                             Strategy =:= one_for_all)
-                                end))
-            end).
-
-take_strategy_and_names({Strategy, Children}) ->
-    Names = [Name || Name <- Children, is_atom(Name)],
-    Trees = [Tree || Tree <- Children, not is_atom(Tree)],
-    V = case Names of
-            [] -> [];
-            _ -> [{Strategy, Names}]
-        end,
-    V
-    ++ lists:flatten(
-           lists:map(fun take_strategy_and_names/1, Trees)).
-
-prop_transform2(doc) ->
-    "The order of the children of a supervisor with the strategy `rest_for_one follows postorder".
-
-prop_transform2() ->
-    ?FORALL(Graph,
-            dependency_digraph(),
-            begin
-                Tree =
-                    optimum_supervision_tree_solver:transform(Graph,
-                                                              optimum_supervision_tree_solver:group(Graph)),
-                ChildrenDescendantPairList =
-                    take_children_descendant_pair_list_about_rest_for_one(Tree),
-                lists:all(fun({Children, Descendant}) ->
-                             lists:all(fun({V1, V2}) ->
-                                          my_digraph:has_path(Graph, V2, V1)
-                                          orelse not my_digraph:has_path(Graph, V1, V2)
-                                       end,
-                                       [{V1, V2} || V1 <- Children, V2 <- Descendant])
-                          end,
-                          ChildrenDescendantPairList)
-            end).
-
-take_children_descendant_pair_list_about_rest_for_one({Strategy, Children}) ->
-    Names = [Name || Name <- Children, is_atom(Name)],
-    Trees = [Tree || Tree <- Children, not is_atom(Tree)],
-    V = case Strategy of
-            rest_for_one ->
-                [{Names,
-                  lists:flatten(
-                      lists:map(fun take_names/1, Trees))}];
-            _ -> []
-        end,
-    lists:foldl(fun(L, Acc) -> Acc ++ L end,
-                V,
-                lists:map(fun take_children_descendant_pair_list_about_rest_for_one/1, Trees)).
-
-take_names(Name) when is_atom(Name) -> Name;
-take_names({_, Children}) ->
+take_restart_processes({_, Children}) ->
     lists:flatten(
-        lists:map(fun take_names/1, Children)).
+        lists:map(fun take_restart_processes/1, Children));
+take_restart_processes(Child) -> Child.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% optimum_supervision_tree_solver:search_split_vertex/1 %%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+prop_search_split_vertex(doc) ->
+    "A split vertex have an input degree greater than or equal to 2".
+
+prop_search_split_vertex() ->
+    ?FORALL(Digraph,
+            dependency_connected_dag(),
+            begin
+                Value = optimum_supervision_tree_solver:search_split_vertex(Digraph),
+                ?IMPLIES(Value =/= false,
+                         begin
+                             {value, Vertex} = Value,
+                             digraph:in_degree(Digraph, Vertex) >= 2
+                         end)
+            end).
