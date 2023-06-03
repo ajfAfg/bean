@@ -41,8 +41,8 @@ prop_solve() ->
                 Digraph = dependency_digraph:from_dependency_graph(Graph),
                 lists:all(fun(V) ->
                              digraph_utils:reaching([V], Digraph)
-                             -- lists:sort(take_restart_processes(V,
-                                                                  optimum_supervision_tree_solver:solve(Graph)))
+                             -- take_restart_processes(V,
+                                                       optimum_supervision_tree_solver:solve(Graph))
                              =:= []
                           end,
                           digraph:vertices(Digraph))
