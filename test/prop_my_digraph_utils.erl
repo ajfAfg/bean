@@ -64,3 +64,36 @@ prop_get_cyclic_strong_component() ->
                                                [{V1, V2} || V1 <- CSCC, V2 <- CSCC]))
                         end)
             end).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% my_digraph_utils:clone/1 %%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+prop_clone1(doc) ->
+    "The instances of the argument graph and the return graph are different".
+
+prop_clone1() ->
+    ?FORALL({Vertices, Edges},
+            vertices_and_edges(),
+            begin
+                G = my_digraph:create(Vertices, Edges),
+                G =/= my_digraph_utils:clone(G)
+            end).
+
+prop_clone2(doc) ->
+    "The instances of the argument graph and the return graph have equal vertices and edges".
+
+prop_clone2() ->
+    ?FORALL({Vertices, Edges},
+            vertices_and_edges(),
+            begin
+                G = my_digraph_utils:clone(
+                        my_digraph:create(Vertices, Edges)),
+                lists:sort(Vertices)
+                =:= lists:sort(
+                        digraph:vertices(G))
+                andalso lists:sort(Edges) =:= lists:sort(edges(G))
+            end).
+
+-spec edges(digraph:graph()) -> [{digraph:vertex(), digraph:vertex()}].
+edges(Graph) ->
+    [{V1, V2} || Edge <- digraph:edges(Graph), {_, V1, V2, _} <- [digraph:edge(Graph, Edge)]].
