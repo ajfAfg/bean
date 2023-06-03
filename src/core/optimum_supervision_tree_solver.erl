@@ -1,123 +1,94 @@
 -module(optimum_supervision_tree_solver).
 
--export([solve/1, group/1, sort_by_postorder/2, transform/2]).
+-export([solve/1, search_split_vertex/1]).
 
--type grouped_graph() :: digraph:graph().
--type grouped_graph_vertex() :: sets:set(dependency_digraph:vertex()).
+-type dag() :: digraph:graph().
+-type dag_vertex() :: [dependency_digraph:vertex()].
 
 -spec solve(dependency_graph:t()) -> supervision_tree:t().
 solve(DependencyGraph) ->
     Graph = dependency_digraph:from_dependency_graph(DependencyGraph),
-    transform(Graph, group(Graph)).
+    transform(digraph_utils:condensation(Graph)).
 
--spec group(dependency_digraph:t()) -> grouped_graph().
-group(Graph) ->
-    Pred = fun(V) -> my_sets:equal(get_strong_component(Graph, V), reachable([V], Graph)) end,
-    Targets = sets:filter(Pred, vertices(Graph)),
-    group(Graph, digraph:new(), Targets, sets:new()).
-
--spec group(dependency_digraph:t(),
-            grouped_graph(),
-            sets:set(dependency_digraph:vertex()),
-            sets:set(grouped_graph_vertex())) ->
-               grouped_graph().
-group(Graph, GroupedGraph, Targets, PrevGroupedTargets) ->
-    case sets:size(Targets) =:= 0 of
-        true -> GroupedGraph;
-        false ->
-            SubGraph =
-                digraph_utils:subgraph(Graph,
-                                       digraph_utils:reaching(
-                                           sets:to_list(Targets), Graph)),
-            GroupedTargets =
-                my_sets:map(fun(Component) -> sets:intersection(Targets, Component) end,
-                            components(SubGraph)),
-            % NOTE: Since `foreach` makes the code difficult to read, list comprehensions are used instead.
-            _ = [digraph:add_vertex(GroupedGraph, V) || V <- sets:to_list(GroupedTargets)],
-            _ = [digraph:add_edge(GroupedGraph, From, To)
-                 || {From, To}
-                        <- % NOTE: Twist edges as we grouped up vertices
-                           lists:uniq([{GroupedVertex, PreGroupedVertex}
-                                       || GroupedVertex <- sets:to_list(GroupedTargets),
-                                          PreGroupedVertex <- sets:to_list(PrevGroupedTargets),
-                                          V1 <- sets:to_list(GroupedVertex),
-                                          V2 <- sets:to_list(PreGroupedVertex),
-                                          my_digraph:has_path(Graph, V1, V2)])],
-            NewTargets =
-                % NOTE:
-                % There may be unvisited behaviors that are not children of `Targets`
-                % but on which the children of `Targets` depend.
-                sets:subtract(reachable([U
-                                         || V <- sets:to_list(Targets),
-                                            U <- digraph:in_neighbours(Graph, V)],
-                                        SubGraph),
-                              Targets),
-            group(Graph, GroupedGraph, NewTargets, GroupedTargets)
-    end.
-
--spec sort_by_postorder([digraph:vertex()], digraph:graph()) -> [digraph:vertex()].
-sort_by_postorder(Vertices, Graph) ->
-    lists:filter(fun(V) -> lists:member(V, Vertices) end, digraph_utils:postorder(Graph)).
-
--spec transform(dependency_digraph:t(), grouped_graph()) -> supervision_tree:t().
-transform(Graph, GroupedGraph) ->
-    case [V || V <- digraph:vertices(GroupedGraph), digraph:out_degree(GroupedGraph, V) =:= 0]
-    of
+% NOTE: The argument graph is assumed to be a DAG.
+-spec transform(dag()) -> supervision_tree:t().
+transform(DAG) ->
+    case digraph_utils:components(DAG) of
         [] -> throw(impossible);
-        [GroupedVertex] -> transform(Graph, GroupedGraph, GroupedVertex);
-        GroupedVertices ->
-            {one_for_one, [transform(Graph, GroupedGraph, V) || V <- GroupedVertices]}
+        [_] -> transform_(DAG);
+        Components ->
+            % NOTE: Remove an unneeded supervisor
+            Fun = fun ({rest_for_one, [V]}) -> V;
+                      (Other) -> Other
+                  end,
+            {one_for_one,
+             lists:map(fun(Component) ->
+                          Fun(transform_(digraph_utils:subgraph(
+                                             my_digraph_utils:clone(DAG), Component)))
+                       end,
+                       Components)}
     end.
 
--spec transform(dependency_digraph:t(), grouped_graph(), grouped_graph_vertex()) ->
-                   supervision_tree:t().
-transform(Graph, GroupedGraph, GroupedVertex) ->
-    RightChild =
-        case digraph:in_neighbours(GroupedGraph, GroupedVertex) of
-            [] -> nil;
-            [V] -> transform(Graph, GroupedGraph, V);
-            Vs -> {one_for_one, [transform(Graph, GroupedGraph, V) || V <- Vs]}
+-spec transform_(dag()) -> supervision_tree:t().
+transform_(DAG) ->
+    case search_split_vertex(DAG) of
+        false ->
+            case digraph:vertices(DAG) of
+                [] -> throw(impossible);
+                Vs -> hd(transform__(lists:reverse(sort_by_topological_ordering(Vs, DAG)), []))
+            end;
+        {value, V} ->
+            Reachable = digraph_utils:reachable([V], DAG),
+            NextDAGs =
+                begin
+                    SubGraph =
+                        digraph_utils:subgraph(
+                            my_digraph_utils:clone(DAG), digraph:vertices(DAG) -- Reachable),
+                    lists:map(fun(Component) ->
+                                 digraph_utils:subgraph(
+                                     my_digraph_utils:clone(SubGraph), Component)
+                              end,
+                              digraph_utils:components(SubGraph))
+                end,
+            hd(transform__(lists:reverse(sort_by_topological_ordering(Reachable, DAG)), NextDAGs))
+    end.
+
+-spec transform__([dag_vertex()], [dag()]) -> [supervision_tree:t()].
+transform__([], []) -> [];
+transform__([], NextDAGs) ->
+    % NOTE: Remove an unneeded supervisor
+    Fun = fun ({rest_for_one, [V]}) -> V;
+              (Other) -> Other
+          end,
+    [{one_for_one, lists:map(Fun, lists:map(fun transform_/1, NextDAGs))}];
+transform__([C | _] = Components, NextDAGs) when length(C) =:= 1 ->
+    {Cs1, Cs2} = lists:splitwith(fun(C_) -> length(C_) =:= 1 end, Components),
+    [{rest_for_one, lists:flatten(Cs1) ++ transform__(Cs2, NextDAGs)}];
+transform__([C | Components], NextDAGs) ->
+    [{one_for_all, C ++ transform__(Components, NextDAGs)}].
+
+% NOTE: The argument graph is assumed to be a DAG.
+-spec sort_by_topological_ordering([digraph:vertex()], digraph:graph()) ->
+                                      [digraph:vertex()].
+sort_by_topological_ordering(Vertices, DAG) ->
+    lists:filter(fun(V) -> lists:member(V, Vertices) end, digraph_utils:topsort(DAG)).
+
+% NOTE:
+% A split vertex (like cut vertex) is defined as
+% a vertex reaching every vertex of a set of vertices that,
+% when removed from a graph, become two or more connected graphs.
+% This function searches the argument graph for topologically sorted vertices in reverse order
+% and returns the split vertex found.
+% Note that the argument graph is assumed to be a DAG and a connected graph.
+-spec search_split_vertex(digraph:graph()) -> {value, digraph:vertex()} | false.
+search_split_vertex(ConnectedDAG) ->
+    Vertices =
+        lists:reverse(
+            digraph_utils:topsort(ConnectedDAG)),
+    Pred =
+        fun(V) ->
+           NewGraph = my_digraph_utils:clone(ConnectedDAG),
+           digraph:del_vertices(NewGraph, digraph_utils:reachable([V], NewGraph)),
+           length(digraph_utils:components(NewGraph)) >= 2
         end,
-    Strategy =
-        case my_sets:any(fun(Set) -> sets:size(Set) > 0 end,
-                         my_sets:map(fun(V) -> get_cyclic_strong_component(Graph, V) end,
-                                     GroupedVertex))
-        of
-            true -> one_for_all;
-            false -> rest_for_one
-        end,
-    case RightChild of
-        nil -> {Strategy, sort_by_postorder(sets:to_list(GroupedVertex), Graph)};
-        _ -> {Strategy, sort_by_postorder(sets:to_list(GroupedVertex), Graph) ++ [RightChild]}
-    end.
-
--spec vertices(digraph:graph()) -> sets:set(digraph:vertex()).
-vertices(G) ->
-    sets:from_list(
-        digraph:vertices(G)).
-
--spec get_strong_component(digraph:graph(), digraph:vertex()) ->
-                              sets:set(digraph:vertex()).
-get_strong_component(Digraph, Vertex) ->
-    case my_digraph_utils:get_strong_component(Digraph, Vertex) of
-        false -> sets:new();
-        Component -> sets:from_list(Component)
-    end.
-
--spec get_cyclic_strong_component(digraph:graph(), digraph:vertex()) ->
-                                     sets:set(digraph:vertex()).
-get_cyclic_strong_component(Digraph, Vertex) ->
-    case my_digraph_utils:get_cyclic_strong_component(Digraph, Vertex) of
-        false -> sets:new();
-        Component -> sets:from_list(Component)
-    end.
-
--spec reachable([digraph:vertex()], digraph:graph()) -> sets:set(digraph:vertex()).
-reachable(Vertices, Digraph) ->
-    sets:from_list(
-        digraph_utils:reachable(Vertices, Digraph)).
-
--spec components(digraph:graph()) -> sets:set(Component)
-    when Component :: sets:set(digraph:vertex()).
-components(Digraph) ->
-    sets:from_list([sets:from_list(C) || C <- digraph_utils:components(Digraph)]).
+    lists:search(Pred, Vertices).
