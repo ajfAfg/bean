@@ -107,6 +107,13 @@ solve_test_() ->
        fun() ->
           G = CreateGraph(lists:seq(1, 3), []),
           ?assertIso({one_for_one, [1, 2, 3]}, optimum_supervision_tree_solver:solve(G))
+       end},
+      {"Graph where vertices in the split vertices are not necessarily connected to each other",
+       fun() ->
+          G = CreateGraph(lists:seq(1, 7),
+                          [{1, 3}, {1, 5}, {2, 3}, {2, 4}, {2, 7}, {4, 3}, {4, 5}, {4, 7}, {5, 6}]),
+          ?assertIso({rest_for_one, [6, 5, 3, {one_for_one, [1, {rest_for_one, [7, 4, 2]}]}]},
+                     optimum_supervision_tree_solver:solve(G))
        end}]}.
 
 take_split_vertices_test_() ->

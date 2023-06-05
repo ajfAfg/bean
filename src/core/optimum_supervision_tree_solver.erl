@@ -31,26 +31,27 @@ transform(DAG) ->
 
 -spec transform_(dag()) -> supervision_tree:t().
 transform_(DAG) ->
-    case search_split_vertex(DAG) of
-        false ->
+    SplitVertices = take_split_vertices(DAG),
+    case length(SplitVertices) =:= length(digraph:vertices(DAG)) of
+        true ->
             case digraph:vertices(DAG) of
                 [] -> throw(impossible);
                 Vs -> hd(transform__(lists:reverse(sort_by_topological_ordering(Vs, DAG)), []))
             end;
-        {value, V} ->
-            Reachable = digraph_utils:reachable([V], DAG),
+        false ->
             NextDAGs =
                 begin
                     SubGraph =
                         digraph_utils:subgraph(
-                            my_digraph_utils:clone(DAG), digraph:vertices(DAG) -- Reachable),
+                            my_digraph_utils:clone(DAG), digraph:vertices(DAG) -- SplitVertices),
                     lists:map(fun(Component) ->
                                  digraph_utils:subgraph(
                                      my_digraph_utils:clone(SubGraph), Component)
                               end,
                               digraph_utils:components(SubGraph))
                 end,
-            hd(transform__(lists:reverse(sort_by_topological_ordering(Reachable, DAG)), NextDAGs))
+            hd(transform__(lists:reverse(sort_by_topological_ordering(SplitVertices, DAG)),
+                           NextDAGs))
     end.
 
 -spec transform__([dag_vertex()], [dag()]) -> [supervision_tree:t()].
