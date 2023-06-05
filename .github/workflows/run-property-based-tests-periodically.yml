@@ -15,4 +15,4 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Run property-based tests
-        run: rebar3 proper -n 1000
+        run: rebar3 proper -n 10000
