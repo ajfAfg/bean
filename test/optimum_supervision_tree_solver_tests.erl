@@ -109,20 +109,24 @@ solve_test_() ->
           ?assertIso({one_for_one, [1, 2, 3]}, optimum_supervision_tree_solver:solve(G))
        end}]}.
 
-search_split_vertex_test_() ->
+take_split_vertices_test_() ->
     {inparallel,
      [{"Nominal",
        fun() ->
           G1 = my_digraph:create(
-                   lists:seq(1, 6), [{1, 4}, {2, 4}, {3, 4}, {4, 5}, {4, 6}]),
-          ?assertEqual({value, 4}, optimum_supervision_tree_solver:search_split_vertex(G1)),
+                   lists:seq(1, 6), [{1, 3}, {1, 4}, {2, 4}, {2, 5}, {3, 6}, {4, 6}, {5, 6}]),
+          ?assertEqual(lists:sort([4, 6]),
+                       lists:sort(
+                           optimum_supervision_tree_solver:take_split_vertices(G1))),
           G2 = my_digraph:create(
-                   lists:seq(1, 6), [{1, 3}, {2, 3}, {3, 4}, {4, 5}, {4, 6}]),
-          ?assertEqual({value, 3}, optimum_supervision_tree_solver:search_split_vertex(G2))
-       end},
-      {"Non-nominal",
-       fun() ->
-          G = my_digraph:create(
-                  lists:seq(1, 5), [{1, 2}, {2, 3}, {3, 4}, {3, 5}]),
-          ?assertEqual(false, optimum_supervision_tree_solver:search_split_vertex(G))
+                   lists:seq(1, 7),
+                   [{1, 3}, {1, 5}, {2, 3}, {2, 4}, {2, 7}, {4, 3}, {4, 5}, {4, 7}, {5, 6}]),
+          ?assertEqual(lists:sort([3, 5, 6]),
+                       lists:sort(
+                           optimum_supervision_tree_solver:take_split_vertices(G2))),
+          G3 = my_digraph:create(
+                   lists:seq(1, 3), [{1, 2}, {2, 3}]),
+          ?assertEqual(lists:sort([1, 2, 3]),
+                       lists:sort(
+                           optimum_supervision_tree_solver:take_split_vertices(G3)))
        end}]}.
