@@ -71,19 +71,30 @@ take_restart_processes({_, Children}) ->
 take_restart_processes(Child) -> Child.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% optimum_supervision_tree_solver:search_split_vertex/1 %%%
+%%% optimum_supervision_tree_solver:take_split_vertices/1 %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-prop_search_split_vertex(doc) ->
-    "A split vertex have an input degree greater than or equal to 2".
+prop_take_split_vertices(doc) ->
+    "Satisfies the definition of *split vertices* except for *minimal*".
 
-prop_search_split_vertex() ->
-    ?FORALL(Digraph,
+prop_take_split_vertices() ->
+    ?FORALL(ConnectedDAG,
             dependency_connected_dag(),
             begin
-                Value = optimum_supervision_tree_solver:search_split_vertex(Digraph),
-                ?IMPLIES(Value =/= false,
-                         begin
-                             {value, Vertex} = Value,
-                             digraph:in_degree(Digraph, Vertex) >= 2
-                         end)
+                SubGraph =
+                    digraph_utils:subgraph(
+                        my_digraph_utils:clone(ConnectedDAG),
+                        optimum_supervision_tree_solver:take_split_vertices(ConnectedDAG)),
+                NextConnectedDAGs =
+                    lists:map(fun(C) ->
+                                 digraph_utils:subgraph(
+                                     my_digraph_utils:clone(SubGraph), C)
+                              end,
+                              digraph_utils:components(SubGraph)),
+                lists:all(fun(V) -> V end,
+                          [not my_digraph:has_path(ConnectedDAG, V1, V2)
+                           || G1 <- NextConnectedDAGs,
+                              G2 <- NextConnectedDAGs,
+                              G1 =/= G2,
+                              V1 <- digraph:vertices(G1),
+                              V2 <- digraph:vertices(G2)])
             end).

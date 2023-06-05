@@ -1,6 +1,6 @@
 -module(optimum_supervision_tree_solver).
 
--export([solve/1, search_split_vertex/1]).
+-export([solve/1, take_split_vertices/1]).
 
 -type dag() :: digraph:graph().
 -type dag_vertex() :: [dependency_digraph:vertex()].
@@ -31,26 +31,27 @@ transform(DAG) ->
 
 -spec transform_(dag()) -> supervision_tree:t().
 transform_(DAG) ->
-    case search_split_vertex(DAG) of
-        false ->
+    SplitVertices = take_split_vertices(DAG),
+    case length(SplitVertices) =:= length(digraph:vertices(DAG)) of
+        true ->
             case digraph:vertices(DAG) of
                 [] -> throw(impossible);
                 Vs -> hd(transform__(lists:reverse(sort_by_topological_ordering(Vs, DAG)), []))
             end;
-        {value, V} ->
-            Reachable = digraph_utils:reachable([V], DAG),
+        false ->
             NextDAGs =
                 begin
                     SubGraph =
                         digraph_utils:subgraph(
-                            my_digraph_utils:clone(DAG), digraph:vertices(DAG) -- Reachable),
+                            my_digraph_utils:clone(DAG), digraph:vertices(DAG) -- SplitVertices),
                     lists:map(fun(Component) ->
                                  digraph_utils:subgraph(
                                      my_digraph_utils:clone(SubGraph), Component)
                               end,
                               digraph_utils:components(SubGraph))
                 end,
-            hd(transform__(lists:reverse(sort_by_topological_ordering(Reachable, DAG)), NextDAGs))
+            hd(transform__(lists:reverse(sort_by_topological_ordering(SplitVertices, DAG)),
+                           NextDAGs))
     end.
 
 -spec transform__([dag_vertex()], [dag()]) -> [supervision_tree:t()].
@@ -74,21 +75,17 @@ sort_by_topological_ordering(Vertices, DAG) ->
     lists:filter(fun(V) -> lists:member(V, Vertices) end, digraph_utils:topsort(DAG)).
 
 % NOTE:
-% A split vertex (like cut vertex) is defined as
-% a vertex reaching every vertex of a set of vertices that,
-% when removed from a graph, become two or more connected graphs.
-% This function searches the argument graph for topologically sorted vertices in reverse order
-% and returns the split vertex found.
-% Note that the argument graph is assumed to be a DAG and a connected graph.
--spec search_split_vertex(digraph:graph()) -> {value, digraph:vertex()} | false.
-search_split_vertex(ConnectedDAG) ->
-    Vertices =
-        lists:reverse(
-            digraph_utils:topsort(ConnectedDAG)),
-    Pred =
-        fun(V) ->
-           NewGraph = my_digraph_utils:clone(ConnectedDAG),
-           digraph:del_vertices(NewGraph, digraph_utils:reachable([V], NewGraph)),
-           length(digraph_utils:components(NewGraph)) >= 2
-        end,
-    lists:search(Pred, Vertices).
+% Split vertices (like cut vertex) are a minimal set of vertices that,
+% when removed from a graph G, divide it into two or more connected graphs,
+% where for all the connected graphs g₁ and g₂, exists v₁ ∈ g₁, v₂ ∈ g₂,
+% v₁ is not reachable by v₂ in G.
+% Note that the argument graph is assumed to be a connected DAG and a connected graph.
+-spec take_split_vertices(digraph:graph()) -> [digraph:vertex()].
+take_split_vertices(ConnectedDAG) ->
+    sets:to_list(
+        lists:foldl(fun(Vs, Acc) -> sets:intersection(Acc, sets:from_list(Vs)) end,
+                    sets:from_list(
+                        digraph:vertices(ConnectedDAG)),
+                    lists:map(fun(V) -> digraph_utils:reachable([V], ConnectedDAG) end,
+                              lists:filter(fun(V) -> digraph:in_degree(ConnectedDAG, V) =:= 0 end,
+                                           digraph:vertices(ConnectedDAG))))).
