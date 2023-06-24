@@ -1,9 +1,12 @@
 -module(optimum_supervision_tree_solver).
 
--export([solve/1, take_split_vertices/1]).
+% -export([solve/1, calc_cost_of_vertex_list/1, take_vertex_splitter/1]).
+-export([solve/1, take_vertex_splitters/1]).
 
 -type dag() :: digraph:graph().
 -type dag_vertex() :: [dependency_digraph:vertex()].
+-type connected_dag() :: digraph:graph().
+-type connected_dag_vertex() :: [dependency_digraph:vertex()].
 
 -spec solve(dependency_graph:t()) -> supervision_tree:t().
 solve(DependencyGraph) ->
@@ -22,46 +25,41 @@ transform(DAG) ->
                       (Other) -> Other
                   end,
             {one_for_one,
-             lists:map(fun(Component) ->
-                          Fun(transform_(digraph_utils:subgraph(
-                                             my_digraph_utils:clone(DAG), Component)))
+             lists:map(fun(Component) -> Fun(transform_(digraph_utils:subgraph(DAG, Component)))
                        end,
                        Components)}
     end.
 
--spec transform_(dag()) -> supervision_tree:t().
-transform_(DAG) ->
-    SplitVertices = take_split_vertices(DAG),
-    case length(SplitVertices) =:= length(digraph:vertices(DAG)) of
-        true ->
-            case digraph:vertices(DAG) of
-                [] -> throw(impossible);
-                Vs -> hd(transform__(lists:reverse(sort_by_topological_ordering(Vs, DAG)), []))
-            end;
-        false ->
-            NextDAGs =
-                begin
-                    SubGraph =
-                        digraph_utils:subgraph(
-                            my_digraph_utils:clone(DAG), digraph:vertices(DAG) -- SplitVertices),
-                    lists:map(fun(Component) ->
-                                 digraph_utils:subgraph(
-                                     my_digraph_utils:clone(SubGraph), Component)
-                              end,
-                              digraph_utils:components(SubGraph))
-                end,
-            hd(transform__(lists:reverse(sort_by_topological_ordering(SplitVertices, DAG)),
-                           NextDAGs))
-    end.
+-spec transform_(connected_dag()) -> supervision_tree:t().
+transform_(ConnectedDAG) ->
+    Candidaes =
+        [begin
+             NextConnectedDAGs =
+                 begin
+                     SubGraph =
+                         digraph_utils:subgraph(ConnectedDAG,
+                                                digraph:vertices(ConnectedDAG) -- VertexSplitter),
+                     lists:map(fun(Component) -> digraph_utils:subgraph(SubGraph, Component) end,
+                               digraph_utils:components(SubGraph))
+                 end,
+             hd(transform__(lists:reverse(sort_by_topological_ordering(VertexSplitter,
+                                                                       ConnectedDAG)),
+                            NextConnectedDAGs))
+         end
+         || VertexSplitter <- take_vertex_splitters(ConnectedDAG)],
+    hd(lists:sort(fun(Tree1, Tree2) ->
+                     supervision_tree:calc_cost(Tree1) =< supervision_tree:calc_cost(Tree2)
+                  end,
+                  Candidaes)).
 
--spec transform__([dag_vertex()], [dag()]) -> [supervision_tree:t()].
+-spec transform__([connected_dag_vertex()], [connected_dag()]) -> [supervision_tree:t()].
 transform__([], []) -> [];
-transform__([], NextDAGs) ->
+transform__([], NextConnectedDAGs) ->
     % NOTE: Remove an unneeded supervisor
     Fun = fun ({rest_for_one, [V]}) -> V;
               (Other) -> Other
           end,
-    [{one_for_one, lists:map(Fun, lists:map(fun transform_/1, NextDAGs))}];
+    [{one_for_one, lists:map(Fun, lists:map(fun transform_/1, NextConnectedDAGs))}];
 transform__([C | _] = Components, NextDAGs) when length(C) =:= 1 ->
     {Cs1, Cs2} = lists:splitwith(fun(C_) -> length(C_) =:= 1 end, Components),
     [{rest_for_one, lists:flatten(Cs1) ++ transform__(Cs2, NextDAGs)}];
@@ -69,23 +67,40 @@ transform__([C | Components], NextDAGs) ->
     [{one_for_all, C ++ transform__(Components, NextDAGs)}].
 
 % NOTE: The argument graph is assumed to be a DAG.
--spec sort_by_topological_ordering([digraph:vertex()], digraph:graph()) ->
-                                      [digraph:vertex()].
+-spec sort_by_topological_ordering([dag_vertex()], dag()) -> [dag_vertex()].
 sort_by_topological_ordering(Vertices, DAG) ->
     lists:filter(fun(V) -> lists:member(V, Vertices) end, digraph_utils:topsort(DAG)).
 
-% NOTE:
-% Split vertices (like cut vertex) are a minimal set of vertices that,
-% when removed from a graph G, divide it into two or more connected graphs,
-% where for all the connected graphs g₁ and g₂, exists v₁ ∈ g₁, v₂ ∈ g₂,
-% v₁ is not reachable by v₂ in G.
-% Note that the argument graph is assumed to be a connected DAG and a connected graph.
--spec take_split_vertices(digraph:graph()) -> [digraph:vertex()].
-take_split_vertices(ConnectedDAG) ->
-    sets:to_list(
-        lists:foldl(fun(Vs, Acc) -> sets:intersection(Acc, sets:from_list(Vs)) end,
-                    sets:from_list(
-                        digraph:vertices(ConnectedDAG)),
-                    lists:map(fun(V) -> digraph_utils:reachable([V], ConnectedDAG) end,
-                              lists:filter(fun(V) -> digraph:in_degree(ConnectedDAG, V) =:= 0 end,
-                                           digraph:vertices(ConnectedDAG))))).
+% -spec take_vertex_splitter(connected_dag()) -> [connected_dag_vertex()].
+% take_vertex_splitter(ConnectedDAG) ->
+%     Candidates =
+%         [sets:to_list(
+%              lists:foldl(fun(Vs, Acc) -> sets:intersection(Acc, sets:from_list(Vs)) end,
+%                          sets:from_list(
+%                              digraph:vertices(ConnectedDAG)),
+%                          [digraph_utils:reachable([U], ConnectedDAG)
+%                           || U <- digraph:vertices(ConnectedDAG),
+%                              digraph:in_degree(ConnectedDAG, U) =:= 0,
+%                              my_digraph:has_path(ConnectedDAG, U, V)]))
+%          || V <- digraph:vertices(ConnectedDAG), digraph:out_degree(ConnectedDAG, V) =:= 0],
+%     element(2,
+%             hd(lists:sort([{calc_cost_of_vertex_list(Candidate), Candidate}
+%                            || Candidate <- Candidates]))).
+%
+% -spec calc_cost_of_vertex_list(dag_vertex()) -> non_neg_integer().
+% calc_cost_of_vertex_list(Vertices) ->
+%     lists:sum([lists:sum([length(hd(Vs)) * length(V)
+%                           || {_, Vs} <- [lists:split(I, Vertices)], V <- Vs])
+%                || I <- lists:seq(0, length(Vertices) - 1)]).
+
+-spec take_vertex_splitters(connected_dag()) -> [[connected_dag_vertex()]].
+take_vertex_splitters(ConnectedDAG) ->
+    [sets:to_list(
+         lists:foldl(fun(Vs, Acc) -> sets:intersection(Acc, sets:from_list(Vs)) end,
+                     sets:from_list(
+                         digraph:vertices(ConnectedDAG)),
+                     [digraph_utils:reachable([U], ConnectedDAG)
+                      || U <- digraph:vertices(ConnectedDAG),
+                         digraph:in_degree(ConnectedDAG, U) =:= 0,
+                         my_digraph:has_path(ConnectedDAG, U, V)]))
+     || V <- digraph:vertices(ConnectedDAG), digraph:out_degree(ConnectedDAG, V) =:= 0].

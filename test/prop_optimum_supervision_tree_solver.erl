@@ -2,7 +2,7 @@
 
 -compile(export_all).
 
--import(proper_helper, [limited_atom/0]).
+-import(proper_helper, [limited_atom/0, random_type/0]).
 
 -include_lib("proper/include/proper.hrl").
 
@@ -70,31 +70,86 @@ take_restart_processes({_, Children}) ->
         lists:map(fun take_restart_processes/1, Children));
 take_restart_processes(Child) -> Child.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% optimum_supervision_tree_solver:take_split_vertices/1 %%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-prop_take_split_vertices(doc) ->
-    "Satisfies the definition of *split vertices* except for *minimal*".
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% optimum_supervision_tree_solver:take_vertex_splitter/1 %%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% prop_take_vertex_splitter1(doc) -> "Satisfy constraint 1 of the vertex splitter".
+%
+% prop_take_vertex_splitter1() ->
+%     ?FORALL(ConnectedDAG,
+%             dependency_connected_dag(),
+%             begin
+%                 VertexSplitter = optimum_supervision_tree_solver:take_vertex_splitter(ConnectedDAG),
+%                 lists:all(fun(X) -> X end,
+%                           [lists:member(U, VertexSplitter)
+%                            || V <- VertexSplitter, U <- digraph_utils:reachable([V], ConnectedDAG)])
+%             end).
+%
+% prop_take_vertex_splitter2(doc) -> "Satisfy constraint 2 of the vertex splitter".
+%
+% prop_take_vertex_splitter2() ->
+%     ?FORALL(ConnectedDAG,
+%             dependency_connected_dag(),
+%             begin
+%                 VertexSplitter = optimum_supervision_tree_solver:take_vertex_splitter(ConnectedDAG),
+%                 ?IMPLIES(lists:sort(
+%                              digraph:vertices(ConnectedDAG))
+%                          =/= lists:sort(VertexSplitter),
+%                          length(digraph_utils:components(
+%                                     digraph_utils:subgraph(
+%                                         my_digraph_utils:clone(ConnectedDAG),
+%                                         digraph:vertices(ConnectedDAG) -- VertexSplitter)))
+%                          >= 2)
+%             end).
 
-prop_take_split_vertices() ->
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% optimum_supervision_tree_solver:take_vertex_splitters/1 %%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+prop_take_vertex_splitters1(doc) -> "Satisfy constraint 1 of the vertex splitter".
+
+prop_take_vertex_splitters1() ->
     ?FORALL(ConnectedDAG,
             dependency_connected_dag(),
             begin
-                SubGraph =
-                    digraph_utils:subgraph(
-                        my_digraph_utils:clone(ConnectedDAG),
-                        optimum_supervision_tree_solver:take_split_vertices(ConnectedDAG)),
-                NextConnectedDAGs =
-                    lists:map(fun(C) ->
-                                 digraph_utils:subgraph(
-                                     my_digraph_utils:clone(SubGraph), C)
-                              end,
-                              digraph_utils:components(SubGraph)),
-                lists:all(fun(V) -> V end,
-                          [not my_digraph:has_path(ConnectedDAG, V1, V2)
-                           || G1 <- NextConnectedDAGs,
-                              G2 <- NextConnectedDAGs,
-                              G1 =/= G2,
-                              V1 <- digraph:vertices(G1),
-                              V2 <- digraph:vertices(G2)])
+                lists:all(fun(X) -> X end,
+                          [lists:member(U, VertexSplitter)
+                           || VertexSplitter
+                                  <- optimum_supervision_tree_solver:take_vertex_splitters(ConnectedDAG),
+                              V <- VertexSplitter,
+                              U <- digraph_utils:reachable([V], ConnectedDAG)])
             end).
+
+prop_take_vertex_splitters2(doc) -> "Satisfy constraint 2 of the vertex splitter".
+
+prop_take_vertex_splitters2() ->
+    ?FORALL(ConnectedDAG,
+            dependency_connected_dag(),
+            begin
+                lists:all(fun(X) -> X end,
+                          [not
+                               (lists:sort(
+                                    digraph:vertices(ConnectedDAG))
+                                =/= lists:sort(VertexSplitter))
+                           orelse length(digraph_utils:components(
+                                             digraph_utils:subgraph(
+                                                 my_digraph_utils:clone(ConnectedDAG),
+                                                 digraph:vertices(ConnectedDAG) -- VertexSplitter)))
+                                  >= 2
+                           || VertexSplitter
+                                  <- optimum_supervision_tree_solver:take_vertex_splitters(ConnectedDAG)])
+            end).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% optimum_supervision_tree_solver:calc_cost_of_vertex_list/1 %%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% prop_calc_cost_of_vertex_list(doc) ->
+%     "Cost is constant regardless of the ordering of the elements of a list".
+%
+% prop_calc_cost_of_vertex_list() ->
+%     ?FORALL(List,
+%             non_empty(list(non_empty(list(random_type())))),
+%             begin
+%                 optimum_supervision_tree_solver:calc_cost_of_vertex_list(List)
+%                 =:= optimum_supervision_tree_solver:calc_cost_of_vertex_list(
+%                         my_lists:shuffle(List))
+%             end).
