@@ -32,7 +32,7 @@ transform(DAG) ->
 
 -spec transform_(connected_dag()) -> supervision_tree:t().
 transform_(ConnectedDAG) ->
-    Candidaes =
+    Candidates =
         [begin
              NextConnectedDAGs =
                  begin
@@ -50,7 +50,7 @@ transform_(ConnectedDAG) ->
     hd(lists:sort(fun(Tree1, Tree2) ->
                      supervision_tree:calc_cost(Tree1) =< supervision_tree:calc_cost(Tree2)
                   end,
-                  Candidaes)).
+                  Candidates)).
 
 -spec transform__([connected_dag_vertex()], [connected_dag()]) -> [supervision_tree:t()].
 transform__([], []) -> [];
