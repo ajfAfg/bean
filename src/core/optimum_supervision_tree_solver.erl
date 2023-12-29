@@ -95,12 +95,13 @@ sort_by_topological_ordering(Vertices, DAG) ->
 
 -spec take_vertex_splitters(connected_dag()) -> [[connected_dag_vertex()]].
 take_vertex_splitters(ConnectedDAG) ->
-    [sets:to_list(
-         lists:foldl(fun(Vs, Acc) -> sets:intersection(Acc, sets:from_list(Vs)) end,
-                     sets:from_list(
-                         digraph:vertices(ConnectedDAG)),
-                     [digraph_utils:reachable([U], ConnectedDAG)
-                      || U <- digraph:vertices(ConnectedDAG),
-                         digraph:in_degree(ConnectedDAG, U) =:= 0,
-                         my_digraph:has_path(ConnectedDAG, U, V)]))
-     || V <- digraph:vertices(ConnectedDAG), digraph:out_degree(ConnectedDAG, V) =:= 0].
+    lists:usort([sets:to_list(
+                     lists:foldl(fun(Vs, Acc) -> sets:intersection(Acc, sets:from_list(Vs)) end,
+                                 sets:from_list(
+                                     digraph:vertices(ConnectedDAG)),
+                                 [digraph_utils:reachable([U], ConnectedDAG)
+                                  || U <- digraph:vertices(ConnectedDAG),
+                                     digraph:in_degree(ConnectedDAG, U) =:= 0,
+                                     my_digraph:has_path(ConnectedDAG, U, V)]))
+                 || V <- digraph:vertices(ConnectedDAG),
+                    digraph:out_degree(ConnectedDAG, V) =:= 0]).
