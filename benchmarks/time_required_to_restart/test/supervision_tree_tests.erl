@@ -104,7 +104,7 @@ calc_cost_test_() ->
           Sups2 =
               [{s1, {#{strategy => one_for_all}, [#{id => g1}, #{id => s2}]}},
                {s2, {#{strategy => one_for_all}, [#{id => g2}, #{id => g3}, #{id => g4}]}}],
-          ?assertEqual(5 + 3 + 3 + 3,
+          ?assertEqual(4 + 3 + 3 + 3,
                        supervision_tree:calc_cost(
                            supervision_tree:from_supervisor_specs(Sups2)))
        end},
@@ -118,20 +118,28 @@ calc_cost_test_() ->
           Sups2 =
               [{s1, {#{strategy => rest_for_one}, [#{id => g1}, #{id => s2}]}},
                {s2, {#{strategy => rest_for_one}, [#{id => g2}, #{id => g3}, #{id => g4}]}}],
-          ?assertEqual(5 + 3 + 2 + 1,
+          ?assertEqual(4 + 3 + 2 + 1,
                        supervision_tree:calc_cost(
                            supervision_tree:from_supervisor_specs(Sups2)))
        end},
       {"Restart strategies can be mixed",
        fun() ->
-          Sups =
+          Sups1 =
               [{s1, {#{strategy => one_for_one}, [#{id => s2}, #{id => s3}]}},
                {s2, {#{strategy => rest_for_one}, [#{id => g5}, #{id => s4}]}},
                {s3, {#{strategy => rest_for_one}, [#{id => g6}, #{id => g7}]}},
                {s4,
                 {#{strategy => one_for_all},
                  [#{id => g1}, #{id => g2}, #{id => g3}, #{id => g4}]}}],
-          ?assertEqual(4 + 4 + 4 + 4 + 6 + 2 + 1,
+          ?assertEqual(4 + 4 + 4 + 4 + 5 + 2 + 1,
                        supervision_tree:calc_cost(
-                           supervision_tree:from_supervisor_specs(Sups)))
+                           supervision_tree:from_supervisor_specs(Sups1))),
+          Sups2 =
+              [{s1, {#{strategy => one_for_all}, [#{id => g1}, #{id => g2}, #{id => s2}]}},
+               {s2, {#{strategy => one_for_one}, [#{id => g3}, #{id => g4}, #{id => s3}]}},
+               {s3, {#{strategy => rest_for_one}, [#{id => g5}, #{id => g6}, #{id => s4}]}},
+               {s4, {#{strategy => one_for_one}, [#{id => g7}, #{id => g8}]}}],
+          ?assertEqual(8 + 8 + 1 + 1 + 4 + 3 + 1 + 1,
+                       supervision_tree:calc_cost(
+                           supervision_tree:from_supervisor_specs(Sups2)))
        end}]}.

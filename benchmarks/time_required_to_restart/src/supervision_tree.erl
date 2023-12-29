@@ -71,7 +71,6 @@ calc_cost_(SupervisionTree, Name) ->
     case digraph:out_neighbours(SupervisionTree, Name) of
         [] -> 1;
         Children ->
-            1
-            + lists:sum(
-                  lists:map(fun(Child) -> calc_cost_(SupervisionTree, Child) end, Children))
+            lists:sum(
+                lists:map(fun(Child) -> calc_cost_(SupervisionTree, Child) end, Children))
     end.
