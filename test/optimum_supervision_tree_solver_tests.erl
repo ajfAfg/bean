@@ -32,87 +32,132 @@ solve_test_() ->
     {inparallel,
      [{"Standard graph",
        fun() ->
-          G = CreateGraph(lists:seq(1, 7), [{1, 2}, {2, 3}, {3, 4}, {3, 5}, {6, 7}]),
-          ?assertIso({one_for_one, [{rest_for_one, [4, 5, 3, 2, 1]}, {rest_for_one, [7, 6]}]},
+          G = CreateGraph(seq_atom(1, 7),
+                          [{'1', '2'}, {'2', '3'}, {'3', '4'}, {'3', '5'}, {'6', '7'}]),
+          ?assertIso({one_for_one,
+                      [{rest_for_one, ['5', '4', '3', '2', '1']}, {rest_for_one, ['7', '6']}]},
                      optimum_supervision_tree_solver:solve(G))
        end},
       {"Graph like Lattice",
        fun() ->
-          G = CreateGraph(lists:seq(1, 6),
-                          [{1, 3}, {1, 4}, {2, 4}, {2, 5}, {3, 6}, {4, 6}, {5, 6}]),
+          G = CreateGraph(seq_atom(1, 6),
+                          [{'1', '3'},
+                           {'1', '4'},
+                           {'2', '4'},
+                           {'2', '5'},
+                           {'3', '6'},
+                           {'4', '6'},
+                           {'5', '6'}]),
           ?assertIso({rest_for_one,
-                      [6, 4, {one_for_one, [{rest_for_one, [3, 1]}, {rest_for_one, [5, 2]}]}]},
+                      ['6',
+                       '4',
+                       {one_for_one, [{rest_for_one, ['3', '1']}, {rest_for_one, ['5', '2']}]}]},
                      optimum_supervision_tree_solver:solve(G))
        end},
       {"Binary tree",
        fun() ->
-          G = CreateGraph(lists:seq(1, 7), [{1, 3}, {2, 3}, {3, 7}, {4, 6}, {5, 6}, {6, 7}]),
+          G = CreateGraph(seq_atom(1, 7),
+                          [{'1', '3'}, {'2', '3'}, {'3', '7'}, {'4', '6'}, {'5', '6'}, {'6', '7'}]),
           ?assertIso({rest_for_one,
-                      [7,
+                      ['7',
                        {one_for_one,
-                        [{rest_for_one, [3, {one_for_one, [1, 2]}]},
-                         {rest_for_one, [6, {one_for_one, [4, 5]}]}]}]},
+                        [{rest_for_one, ['3', {one_for_one, ['1', '2']}]},
+                         {rest_for_one, ['6', {one_for_one, ['4', '5']}]}]}]},
                      optimum_supervision_tree_solver:solve(G))
        end},
       {"Graph having circles",
        fun() ->
-          G1 = CreateGraph(lists:seq(1, 5), [{1, 2}, {2, 3}, {3, 4}, {4, 2}, {3, 5}]),
-          ?assertIso({rest_for_one, [5, {one_for_all, [4, 3, 2, {rest_for_one, [1]}]}]},
+          G1 = CreateGraph(seq_atom(1, 5),
+                           [{'1', '2'}, {'2', '3'}, {'3', '4'}, {'4', '2'}, {'3', '5'}]),
+          ?assertIso({rest_for_one, ['5', {one_for_all, ['4', '3', '2', {rest_for_one, ['1']}]}]},
                      optimum_supervision_tree_solver:solve(G1)),
-          G2 = CreateGraph(lists:seq(1, 5), [{1, 2}, {2, 3}, {2, 4}, {2, 5}, {3, 1}, {4, 5}]),
-          ?assertIso({rest_for_one, [5, 4, {one_for_all, [3, 2, 1]}]},
+          G2 = CreateGraph(seq_atom(1, 5),
+                           [{'1', '2'},
+                            {'2', '3'},
+                            {'2', '4'},
+                            {'2', '5'},
+                            {'3', '1'},
+                            {'4', '5'}]),
+          ?assertIso({rest_for_one, ['5', '4', {one_for_all, ['3', '2', '1']}]},
                      optimum_supervision_tree_solver:solve(G2)),
-          G3 = CreateGraph(lists:seq(1, 4), [{1, 2}, {2, 1}, {2, 3}, {3, 4}, {4, 3}]),
-          ?assertIso({one_for_all, [3, 4, {one_for_all, [1, 2]}]},
+          G3 = CreateGraph(seq_atom(1, 4),
+                           [{'1', '2'}, {'2', '1'}, {'2', '3'}, {'3', '4'}, {'4', '3'}]),
+          ?assertIso({one_for_all, ['3', '4', {one_for_all, ['1', '2']}]},
                      optimum_supervision_tree_solver:solve(G3)),
-          G4 = CreateGraph(lists:seq(1, 8),
-                           [{1, 2},
-                            {2, 1},
-                            {2, 3},
-                            {3, 4},
-                            {4, 5},
-                            {5, 6},
-                            {6, 5},
-                            {6, 8},
-                            {7, 8}]),
+          G4 = CreateGraph(seq_atom(1, 8),
+                           [{'1', '2'},
+                            {'2', '1'},
+                            {'2', '3'},
+                            {'3', '4'},
+                            {'4', '5'},
+                            {'5', '6'},
+                            {'6', '5'},
+                            {'6', '8'},
+                            {'7', '8'}]),
           ?assertIso({rest_for_one,
-                      [8,
+                      ['8',
                        {one_for_one,
-                        [7,
-                         {one_for_all, [5, 6, {rest_for_one, [4, 3, {one_for_all, [1, 2]}]}]}]}]},
+                        ['7',
+                         {one_for_all,
+                          ['5', '6', {rest_for_one, ['4', '3', {one_for_all, ['1', '2']}]}]}]}]},
                      optimum_supervision_tree_solver:solve(G4)),
-          G5 = CreateGraph(lists:seq(1, 6), [{1, 3}, {2, 3}, {3, 4}, {4, 5}, {5, 4}, {5, 6}]),
+          G5 = CreateGraph(seq_atom(1, 6),
+                           [{'1', '3'},
+                            {'2', '3'},
+                            {'3', '4'},
+                            {'4', '5'},
+                            {'5', '4'},
+                            {'5', '6'}]),
           ?assertIso({rest_for_one,
-                      [6, {one_for_all, [5, 4, {rest_for_one, [3, {one_for_one, [2, 1]}]}]}]},
+                      ['6',
+                       {one_for_all,
+                        ['5', '4', {rest_for_one, ['3', {one_for_one, ['2', '1']}]}]}]},
                      optimum_supervision_tree_solver:solve(G5))
        end},
       {"Graph having circles in first and last",
        fun() ->
-          G = CreateGraph(lists:seq(1, 6),
-                          [{1, 2}, {2, 3}, {3, 1}, {3, 4}, {4, 5}, {5, 6}, {6, 5}]),
-          ?assertIso({one_for_all, [6, 5, {rest_for_one, [4, {one_for_all, [3, 2, 1]}]}]},
+          G = CreateGraph(seq_atom(1, 6),
+                          [{'1', '2'},
+                           {'2', '3'},
+                           {'3', '1'},
+                           {'3', '4'},
+                           {'4', '5'},
+                           {'5', '6'},
+                           {'6', '5'}]),
+          ?assertIso({one_for_all,
+                      ['6', '5', {rest_for_one, ['4', {one_for_all, ['3', '2', '1']}]}]},
                      optimum_supervision_tree_solver:solve(G))
        end},
       {"Cycle graph",
        fun() ->
-          G = CreateGraph([1, 2, 3, 4], [{1, 2}, {2, 3}, {2, 4}, {3, 1}, {4, 1}]),
-          ?assertIso({one_for_all, [3, 4, 2, 1]}, optimum_supervision_tree_solver:solve(G))
+          G = CreateGraph(seq_atom(1, 4),
+                          [{'1', '2'}, {'2', '3'}, {'2', '4'}, {'3', '1'}, {'4', '1'}]),
+          ?assertIso({one_for_all, ['3', '4', '2', '1']}, optimum_supervision_tree_solver:solve(G))
        end},
       {"Graph with detour",
        fun() ->
-          G = CreateGraph(lists:seq(1, 4), [{1, 2}, {1, 4}, {2, 3}, {3, 4}]),
-          ?assertIso({rest_for_one, [4, 3, 2, 1]}, optimum_supervision_tree_solver:solve(G))
+          G = CreateGraph(seq_atom(1, 4), [{'1', '2'}, {'1', '4'}, {'2', '3'}, {'3', '4'}]),
+          ?assertIso({rest_for_one, ['4', '3', '2', '1']}, optimum_supervision_tree_solver:solve(G))
        end},
       {"Null graph",
        fun() ->
-          G = CreateGraph(lists:seq(1, 3), []),
-          ?assertIso({one_for_one, [1, 2, 3]}, optimum_supervision_tree_solver:solve(G))
+          G = CreateGraph(seq_atom(1, 3), []),
+          ?assertIso({one_for_one, ['1', '2', '3']}, optimum_supervision_tree_solver:solve(G))
        end},
       {"Graph where vertices in the split vertices are not necessarily connected to each other",
        fun() ->
-          G = CreateGraph(lists:seq(1, 7),
-                          [{1, 3}, {1, 5}, {2, 3}, {2, 4}, {2, 7}, {4, 3}, {4, 5}, {4, 7}, {5, 6}]),
-          ?assertIso({rest_for_one, [6, 5, 3, {one_for_one, [1, {rest_for_one, [7, 4, 2]}]}]},
+          G = CreateGraph(seq_atom(1, 7),
+                          [{'1', '3'},
+                           {'1', '5'},
+                           {'2', '3'},
+                           {'2', '4'},
+                           {'2', '7'},
+                           {'4', '3'},
+                           {'4', '5'},
+                           {'4', '7'},
+                           {'5', '6'}]),
+          ?assertIso({rest_for_one,
+                      ['6', '5', '3', {one_for_one, ['1', {rest_for_one, ['7', '4', '2']}]}]},
                      optimum_supervision_tree_solver:solve(G))
        end}]}.
 
@@ -122,18 +167,31 @@ take_split_vertices_test_() ->
        fun() ->
           G1 = my_digraph:create(
                    lists:seq(1, 6), [{1, 3}, {1, 4}, {2, 4}, {2, 5}, {3, 6}, {4, 6}, {5, 6}]),
-          ?assertEqual(lists:sort([4, 6]),
+          ?assertEqual(lists:sort(
+                           lists:map(fun lists:sort/1, [[4, 6]])),
                        lists:sort(
-                           optimum_supervision_tree_solver:take_split_vertices(G1))),
+                           lists:map(fun lists:sort/1,
+                                     optimum_supervision_tree_solver:take_vertex_splitters(G1)))),
           G2 = my_digraph:create(
                    lists:seq(1, 7),
                    [{1, 3}, {1, 5}, {2, 3}, {2, 4}, {2, 7}, {4, 3}, {4, 5}, {4, 7}, {5, 6}]),
-          ?assertEqual(lists:sort([3, 5, 6]),
+          % NOTE: `[2, 3, 4, 5, 6, 7]` is not a vertex splitter (Counter-example of correctness)
+          ?assertEqual(lists:sort(
+                           lists:map(fun lists:sort/1, [[3, 5, 6], [2, 3, 4, 5, 6, 7]])),
                        lists:sort(
-                           optimum_supervision_tree_solver:take_split_vertices(G2))),
+                           lists:map(fun lists:sort/1,
+                                     optimum_supervision_tree_solver:take_vertex_splitters(G2)))),
           G3 = my_digraph:create(
                    lists:seq(1, 3), [{1, 2}, {2, 3}]),
-          ?assertEqual(lists:sort([1, 2, 3]),
+          ?assertEqual(lists:sort(
+                           lists:map(fun lists:sort/1, [[1, 2, 3]])),
                        lists:sort(
-                           optimum_supervision_tree_solver:take_split_vertices(G3)))
+                           lists:map(fun lists:sort/1,
+                                     optimum_supervision_tree_solver:take_vertex_splitters(G3))))
        end}]}.
+
+%% ===================================================================
+%% Private API
+%% ===================================================================
+-spec seq_atom(integer(), integer()) -> [integer()].
+seq_atom(From, To) -> [list_to_atom(integer_to_list(X)) || X <- lists:seq(From, To)].
