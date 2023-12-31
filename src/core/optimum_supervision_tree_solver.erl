@@ -1,6 +1,5 @@
 -module(optimum_supervision_tree_solver).
 
-% -export([solve/1, calc_cost_of_vertex_list/1, take_vertex_splitter/1]).
 -export([solve/1, take_vertex_splitters/1]).
 
 -type dag() :: digraph:graph().
@@ -70,28 +69,6 @@ transform__([C | Components], NextDAGs) ->
 -spec sort_by_topological_ordering([dag_vertex()], dag()) -> [dag_vertex()].
 sort_by_topological_ordering(Vertices, DAG) ->
     lists:filter(fun(V) -> lists:member(V, Vertices) end, digraph_utils:topsort(DAG)).
-
-% -spec take_vertex_splitter(connected_dag()) -> [connected_dag_vertex()].
-% take_vertex_splitter(ConnectedDAG) ->
-%     Candidates =
-%         [sets:to_list(
-%              lists:foldl(fun(Vs, Acc) -> sets:intersection(Acc, sets:from_list(Vs)) end,
-%                          sets:from_list(
-%                              digraph:vertices(ConnectedDAG)),
-%                          [digraph_utils:reachable([U], ConnectedDAG)
-%                           || U <- digraph:vertices(ConnectedDAG),
-%                              digraph:in_degree(ConnectedDAG, U) =:= 0,
-%                              my_digraph:has_path(ConnectedDAG, U, V)]))
-%          || V <- digraph:vertices(ConnectedDAG), digraph:out_degree(ConnectedDAG, V) =:= 0],
-%     element(2,
-%             hd(lists:sort([{calc_cost_of_vertex_list(Candidate), Candidate}
-%                            || Candidate <- Candidates]))).
-%
-% -spec calc_cost_of_vertex_list(dag_vertex()) -> non_neg_integer().
-% calc_cost_of_vertex_list(Vertices) ->
-%     lists:sum([lists:sum([length(hd(Vs)) * length(V)
-%                           || {_, Vs} <- [lists:split(I, Vertices)], V <- Vs])
-%                || I <- lists:seq(0, length(Vertices) - 1)]).
 
 -spec take_vertex_splitters(connected_dag()) -> [[connected_dag_vertex()]].
 take_vertex_splitters(ConnectedDAG) ->
