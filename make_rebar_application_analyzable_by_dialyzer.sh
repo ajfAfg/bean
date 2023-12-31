@@ -16,7 +16,14 @@ dir='_build/default/lib/rebar/apps/rebar'
 
 grep 'no_debug_info' "${dir}/rebar.config" >/dev/null 2>&1
 if [ $? = 0 ]; then
-    sed -i '' 's/no_debug_info/debug_info/g' "${dir}/rebar.config"
+    case "$(uname -s)" in
+    'Darwin') sed -i '' 's/no_debug_info/debug_info/g' "${dir}/rebar.config" ;;
+    'Linux') sed -i 's/no_debug_info/debug_info/g' "${dir}/rebar.config" ;;
+    *)
+        echo "'$(uname -s)' is not supported." 1>&2
+        exit 1
+        ;;
+    esac
     rm -rf "${dir}/ebin"
     rebar3 compile -d
 fi
