@@ -2,7 +2,7 @@
 
 -compile(export_all).
 
--import(proper_helper, [limited_atom/0]).
+-import(proper_helper, [limited_atom/0, random_type/0]).
 
 -include_lib("proper/include/proper.hrl").
 
@@ -70,31 +70,44 @@ take_restart_processes({_, Children}) ->
         lists:map(fun take_restart_processes/1, Children));
 take_restart_processes(Child) -> Child.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% optimum_supervision_tree_solver:take_split_vertices/1 %%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-prop_take_split_vertices(doc) ->
-    "Satisfies the definition of *split vertices* except for *minimal*".
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% optimum_supervision_tree_solver:take_all_local_minimum_vertex_splitters/1 %%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+prop_take_all_local_minimum_vertex_splitters1(doc) ->
+    "Satisfy constraint 1 of the vertex splitter".
 
-prop_take_split_vertices() ->
+prop_take_all_local_minimum_vertex_splitters1() ->
     ?FORALL(ConnectedDAG,
             dependency_connected_dag(),
             begin
-                SubGraph =
-                    digraph_utils:subgraph(
-                        my_digraph_utils:clone(ConnectedDAG),
-                        optimum_supervision_tree_solver:take_split_vertices(ConnectedDAG)),
-                NextConnectedDAGs =
-                    lists:map(fun(C) ->
-                                 digraph_utils:subgraph(
-                                     my_digraph_utils:clone(SubGraph), C)
-                              end,
-                              digraph_utils:components(SubGraph)),
-                lists:all(fun(V) -> V end,
-                          [not my_digraph:has_path(ConnectedDAG, V1, V2)
-                           || G1 <- NextConnectedDAGs,
-                              G2 <- NextConnectedDAGs,
-                              G1 =/= G2,
-                              V1 <- digraph:vertices(G1),
-                              V2 <- digraph:vertices(G2)])
+                lists:all(fun(X) -> X end,
+                          [lists:member(U, VertexSplitter)
+                           || VertexSplitter
+                                  <- optimum_supervision_tree_solver:take_all_local_minimum_vertex_splitters(ConnectedDAG),
+                              V <- VertexSplitter,
+                              U <- digraph_utils:reachable([V], ConnectedDAG)])
             end).
+
+% TODO:
+% The current implementation do not always satisfy Vertex splitter property 2.
+
+% prop_take_all_local_minimum_vertex_splitters2(doc) ->
+%     "Satisfy constraint 2 of the vertex splitter".
+%
+% prop_take_all_local_minimum_vertex_splitters2() ->
+%     ?FORALL(ConnectedDAG,
+%             dependency_connected_dag(),
+%             begin
+%                 lists:all(fun(X) -> X end,
+%                           [not
+%                                (lists:sort(
+%                                     digraph:vertices(ConnectedDAG))
+%                                 =/= lists:sort(VertexSplitter))
+%                            orelse length(digraph_utils:components(
+%                                              digraph_utils:subgraph(
+%                                                  my_digraph_utils:clone(ConnectedDAG),
+%                                                  digraph:vertices(ConnectedDAG) -- VertexSplitter)))
+%                                   >= 2
+%                            || VertexSplitter
+%                                   <- optimum_supervision_tree_solver:take_all_local_minimum_vertex_splitters(ConnectedDAG)])
+%             end).
