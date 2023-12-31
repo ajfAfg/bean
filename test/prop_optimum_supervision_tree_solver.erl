@@ -82,7 +82,7 @@ prop_take_vertex_splitters1() ->
                 lists:all(fun(X) -> X end,
                           [lists:member(U, VertexSplitter)
                            || VertexSplitter
-                                  <- optimum_supervision_tree_solver:take_vertex_splitters(ConnectedDAG),
+                                  <- optimum_supervision_tree_solver:take_all_local_minimum_vertex_splitters(ConnectedDAG),
                               V <- VertexSplitter,
                               U <- digraph_utils:reachable([V], ConnectedDAG)])
             end).
@@ -104,5 +104,5 @@ prop_take_vertex_splitters2() ->
                                                  digraph:vertices(ConnectedDAG) -- VertexSplitter)))
                                   >= 2
                            || VertexSplitter
-                                  <- optimum_supervision_tree_solver:take_vertex_splitters(ConnectedDAG)])
+                                  <- optimum_supervision_tree_solver:take_all_local_minimum_vertex_splitters(ConnectedDAG)])
             end).

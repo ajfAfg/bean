@@ -171,7 +171,7 @@ take_split_vertices_test_() ->
                            lists:map(fun lists:sort/1, [[4, 6]])),
                        lists:sort(
                            lists:map(fun lists:sort/1,
-                                     optimum_supervision_tree_solver:take_vertex_splitters(G1)))),
+                                     optimum_supervision_tree_solver:take_all_local_minimum_vertex_splitters(G1)))),
           G2 = my_digraph:create(
                    lists:seq(1, 7),
                    [{1, 3}, {1, 5}, {2, 3}, {2, 4}, {2, 7}, {4, 3}, {4, 5}, {4, 7}, {5, 6}]),
@@ -180,14 +180,14 @@ take_split_vertices_test_() ->
                            lists:map(fun lists:sort/1, [[3, 5, 6], [2, 3, 4, 5, 6, 7]])),
                        lists:sort(
                            lists:map(fun lists:sort/1,
-                                     optimum_supervision_tree_solver:take_vertex_splitters(G2)))),
+                                     optimum_supervision_tree_solver:take_all_local_minimum_vertex_splitters(G2)))),
           G3 = my_digraph:create(
                    lists:seq(1, 3), [{1, 2}, {2, 3}]),
           ?assertEqual(lists:sort(
                            lists:map(fun lists:sort/1, [[1, 2, 3]])),
                        lists:sort(
                            lists:map(fun lists:sort/1,
-                                     optimum_supervision_tree_solver:take_vertex_splitters(G3))))
+                                     optimum_supervision_tree_solver:take_all_local_minimum_vertex_splitters(G3))))
        end}]}.
 
 %% ===================================================================

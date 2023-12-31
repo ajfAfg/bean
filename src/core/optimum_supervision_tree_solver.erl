@@ -1,6 +1,6 @@
 -module(optimum_supervision_tree_solver).
 
--export([solve/1, take_vertex_splitters/1]).
+-export([solve/1, take_all_local_minimum_vertex_splitters/1]).
 
 -type dag() :: digraph:graph().
 -type dag_vertex() :: [dependency_digraph:vertex()].
@@ -45,7 +45,7 @@ transform_(ConnectedDAG) ->
                                                                        ConnectedDAG)),
                             NextConnectedDAGs))
          end
-         || VertexSplitter <- take_vertex_splitters(ConnectedDAG)],
+         || VertexSplitter <- take_all_local_minimum_vertex_splitters(ConnectedDAG)],
     hd(lists:sort(fun(Tree1, Tree2) ->
                      supervision_tree:calc_cost(Tree1) =< supervision_tree:calc_cost(Tree2)
                   end,
@@ -70,8 +70,9 @@ transform__([C | Components], NextDAGs) ->
 sort_by_topological_ordering(Vertices, DAG) ->
     lists:filter(fun(V) -> lists:member(V, Vertices) end, digraph_utils:topsort(DAG)).
 
--spec take_vertex_splitters(connected_dag()) -> [[connected_dag_vertex()]].
-take_vertex_splitters(ConnectedDAG) ->
+-spec take_all_local_minimum_vertex_splitters(connected_dag()) ->
+                                                 [[connected_dag_vertex()]].
+take_all_local_minimum_vertex_splitters(ConnectedDAG) ->
     lists:usort([sets:to_list(
                      lists:foldl(fun(Vs, Acc) -> sets:intersection(Acc, sets:from_list(Vs)) end,
                                  sets:from_list(
