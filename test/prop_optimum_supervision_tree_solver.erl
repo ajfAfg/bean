@@ -70,12 +70,13 @@ take_restart_processes({_, Children}) ->
         lists:map(fun take_restart_processes/1, Children));
 take_restart_processes(Child) -> Child.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% optimum_supervision_tree_solver:take_vertex_splitters/1 %%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-prop_take_vertex_splitters1(doc) -> "Satisfy constraint 1 of the vertex splitter".
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% optimum_supervision_tree_solver:take_all_local_minimum_vertex_splitters/1 %%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+prop_take_all_local_minimum_vertex_splitters1(doc) ->
+    "Satisfy constraint 1 of the vertex splitter".
 
-prop_take_vertex_splitters1() ->
+prop_take_all_local_minimum_vertex_splitters1() ->
     ?FORALL(ConnectedDAG,
             dependency_connected_dag(),
             begin
@@ -87,9 +88,10 @@ prop_take_vertex_splitters1() ->
                               U <- digraph_utils:reachable([V], ConnectedDAG)])
             end).
 
-prop_take_vertex_splitters2(doc) -> "Satisfy constraint 2 of the vertex splitter".
+prop_take_all_local_minimum_vertex_splitters2(doc) ->
+    "Satisfy constraint 2 of the vertex splitter".
 
-prop_take_vertex_splitters2() ->
+prop_take_all_local_minimum_vertex_splitters2() ->
     ?FORALL(ConnectedDAG,
             dependency_connected_dag(),
             begin

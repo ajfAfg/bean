@@ -189,7 +189,7 @@ solve_test_() ->
                                optimum_supervision_tree_solver:solve(G))
        end}]}.
 
-take_split_vertices_test_() ->
+take_all_local_minimum_vertex_splitters_test_() ->
     {inparallel,
      [{"Nominal",
        fun() ->
