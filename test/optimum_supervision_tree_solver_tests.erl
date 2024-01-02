@@ -186,6 +186,11 @@ solve_test_() ->
                                  ['3',
                                   '6',
                                   '5',
+                                  {one_for_one, ['1', {rest_for_one, ['7', '4', '2']}]}]},
+                                {rest_for_one,
+                                 ['6',
+                                  '3',
+                                  '5',
                                   {one_for_one, ['1', {rest_for_one, ['7', '4', '2']}]}]}],
                                Solve(G))
        end}]}.
