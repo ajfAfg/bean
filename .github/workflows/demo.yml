@@ -56,7 +56,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - name: Demonstrate with polynomial_time_without_correctness
+      - name: Demonstrate with exp_time_with_correctness
         run: |
           mkdir _checkouts
           ln -s ${PWD}/../ _checkouts/bean
