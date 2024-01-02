@@ -3,14 +3,14 @@ name: Run property-based tests periodically
 on:
   schedule:
     # NOTE: Every day at 00:00 (JST)
-    - cron: '0 15 * * *'
+    - cron: "0 15 * * *"
 
 jobs:
   test:
     runs-on: ubuntu-22.04
 
     container:
-      image: erlang:25.0.3
+      image: erlang:26.2.1
 
     steps:
       - uses: actions/checkout@v3
