@@ -9,10 +9,10 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% optimum_supervision_tree_solver:solve/1 %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-prop_solve(doc) ->
+prop_solve1(doc) ->
     "When a process is restarted, the processes that depend on it are also restarted".
 
-prop_solve() ->
+prop_solve1() ->
     ?FORALL(Graph,
             dependency_graph_generator:dependency_graph(),
             begin
@@ -48,3 +48,15 @@ take_restart_processes({_, Children}) ->
     lists:flatten(
         lists:map(fun take_restart_processes/1, Children));
 take_restart_processes(Child) -> Child.
+
+prop_solve2(doc) -> "About cost, exp time & correct ≤ polynomial time & incorrect".
+
+prop_solve2() ->
+    ?FORALL(Graph,
+            dependency_graph_generator:dependency_graph(),
+            supervision_tree:calc_cost(
+                optimum_supervision_tree_solver:solve(Graph,
+                                                      fun all_local_minimum_vertex_splitters_solver:solve_in_exp_time_with_correctness/1))
+            =< supervision_tree:calc_cost(
+                   optimum_supervision_tree_solver:solve(Graph,
+                                                         fun all_local_minimum_vertex_splitters_solver:solve_in_polynomial_time_without_correctness/1))).
