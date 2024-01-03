@@ -41,59 +41,16 @@ solve_in_exp_time_with_correctness(ConnectedDAG) ->
                 <- my_lists:power(
                        digraph:vertices(ConnectedDAG)),
             dependency_digraph:is_vertex_splitter(ConnectedDAG, Vertices)],
-    Candidates2 =
-        begin
-            MinimumVertexSplittersForEveryExitVertex =
-                lists:foldl(fun(VertexSplitter, Acc) ->
-                               lists:foldl(fun(ExitVertex, Acc2) ->
-                                              maps:update_with(ExitVertex,
-                                                               fun(VertexSplitters) ->
-                                                                  case
-                                                                      compare(length(VertexSplitter),
-                                                                              length(hd(VertexSplitters)))
-                                                                  of
-                                                                      less -> [VertexSplitter];
-                                                                      greater -> VertexSplitters;
-                                                                      equal ->
-                                                                          [VertexSplitter
-                                                                           | VertexSplitters]
-                                                                  end
-                                                               end,
-                                                               Acc2)
-                                           end,
-                                           Acc,
-                                           [V
-                                            || V <- VertexSplitter,
-                                               is_exit_vertex(ConnectedDAG, V)])
-                            end,
-                            maps:from_keys(exit_vertices(ConnectedDAG),
-                                           [digraph:vertices(ConnectedDAG)]),
-                            Candidates),
-            lists:usort(
-                lists:map(fun lists:sort/1,
-                          my_lists:flatten(
-                              maps:values(MinimumVertexSplittersForEveryExitVertex))))
-        end,
-    [S1
-     || S1 <- Candidates2,
-        not
-            lists:any(fun(S2) ->
-                         sets:is_subset(
-                             sets:from_list(S2), sets:from_list(S1))
-                      end,
-                      lists:delete(S1, Candidates2))].
+    lists:filter(fun(Candidate) ->
+                    not
+                        lists:any(fun(Vertices) ->
+                                     dependency_digraph:is_vertex_splitter(ConnectedDAG,
+                                                                           Candidate -- Vertices)
+                                  end,
+                                  lists:delete([], my_lists:power(Candidate)))
+                 end,
+                 Candidates).
 
 %% ===================================================================
 %% Private API
 %% ===================================================================
--spec compare(term(), term()) -> less | greater | equal.
-compare(X, Y) when X < Y -> less;
-compare(X, Y) when X > Y -> greater;
-compare(_, _) -> equal.
-
--spec exit_vertices(digraph:graph()) -> [digraph:vertex()].
-exit_vertices(Digraph) ->
-    [V || V <- digraph:vertices(Digraph), is_exit_vertex(Digraph, V)].
-
--spec is_exit_vertex(digraph:graph(), digraph:vertex()) -> boolean().
-is_exit_vertex(Digraph, Vertex) -> digraph:out_degree(Digraph, Vertex) =:= 0.

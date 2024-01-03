@@ -114,5 +114,36 @@ solve_in_exp_time_with_correctness_test_() ->
                            lists:map(fun lists:sort/1, [[2, 3], [5], [8]])),
                        lists:sort(
                            lists:map(fun lists:sort/1,
-                                     all_local_minimum_vertex_splitters_solver:solve_in_exp_time_with_correctness(G5))))
+                                     all_local_minimum_vertex_splitters_solver:solve_in_exp_time_with_correctness(G5)))),
+          G6 = my_digraph:create(
+                   lists:seq(1, 16),
+                   [{1, 2},
+                    {2, 3},
+                    {3, 4},
+                    {3, 5},
+                    {6, 5},
+                    {7, 4},
+                    {7, 8},
+                    {9, 10},
+                    {10, 8},
+                    {10, 11},
+                    {11, 12},
+                    {11, 13},
+                    {14, 2},
+                    {14, 15},
+                    {15, 12},
+                    {16, 13},
+                    {16, 15}]),
+          ?assertEqual(lists:sort(
+                           lists:map(fun lists:sort/1,
+                                     [[4, 8],
+                                      [4, 12, 13],
+                                      [4, 12, 15],
+                                      [5],
+                                      [8, 12, 13],
+                                      [8, 12, 15],
+                                      [12, 13, 15]])),
+                       lists:sort(
+                           lists:map(fun lists:sort/1,
+                                     all_local_minimum_vertex_splitters_solver:solve_in_exp_time_with_correctness(G6))))
        end}]}.
