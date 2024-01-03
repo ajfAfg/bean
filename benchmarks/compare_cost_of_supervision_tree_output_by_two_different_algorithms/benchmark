@@ -1,0 +1,5 @@
+#!/bin/sh
+
+rebar3 escriptize >/dev/null 2>&1
+
+_build/default/bin/compare_cost_of_supervision_tree_output_by_two_different_algorithms
