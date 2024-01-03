@@ -86,3 +86,19 @@ prop_solve_in_exp_time_with_correctness3() ->
                           end,
                           all_local_minimum_vertex_splitters_solver:solve_in_exp_time_with_correctness(ConnectedDAG))
             end).
+
+prop_solve_in_exp_time_with_correctness4(doc) ->
+    "The return value equals the vertices of the argument graph if only one entrance vertex".
+
+prop_solve_in_exp_time_with_correctness4() ->
+    ?FORALL(ConnectedDAG,
+            dependency_connected_dag(),
+            begin
+                ?IMPLIES(length([V
+                                 || V <- digraph:vertices(ConnectedDAG),
+                                    digraph:in_degree(ConnectedDAG, V) =:= 0])
+                         =:= 1,
+                         lists:sort(
+                             digraph:vertices(ConnectedDAG))
+                         =:= lists:sort(hd(all_local_minimum_vertex_splitters_solver:solve_in_exp_time_with_correctness(ConnectedDAG))))
+            end).
