@@ -9,6 +9,9 @@
 -type take_all_local_minimum_vertex_splitters() ::
     fun((dependency_digraph:t()) -> [[dependency_digraph:vertex()]]).
 
+%% ===================================================================
+%% Public API
+%% ===================================================================
 % NOTE:
 % The argument graph is assumed to be a connected DAG.
 % To reduce computation time, do not check whether `ConnectedDAG` is a connected DAG.
@@ -39,17 +42,21 @@ solve_in_exp_time_with_correctness(ConnectedDAG) ->
                        digraph:vertices(ConnectedDAG)),
             dependency_digraph:is_vertex_splitter(ConnectedDAG, Vertices)],
     Candidates2 =
-        lists:usort(
-            maps:values(
+        begin
+            MinimumVertexSplittersForEveryExitVertex =
                 lists:foldl(fun(VertexSplitter, Acc) ->
                                lists:foldl(fun(ExitVertex, Acc2) ->
                                               maps:update_with(ExitVertex,
-                                                               fun(VertexSplitter2) ->
-                                                                  case length(VertexSplitter)
-                                                                       < length(VertexSplitter2)
+                                                               fun(VertexSplitters) ->
+                                                                  case
+                                                                      compare(length(VertexSplitter),
+                                                                              length(hd(VertexSplitters)))
                                                                   of
-                                                                      true -> VertexSplitter;
-                                                                      false -> VertexSplitter2
+                                                                      less -> [VertexSplitter];
+                                                                      greater -> VertexSplitters;
+                                                                      equal ->
+                                                                          [VertexSplitter
+                                                                           | VertexSplitters]
                                                                   end
                                                                end,
                                                                Acc2)
@@ -57,13 +64,16 @@ solve_in_exp_time_with_correctness(ConnectedDAG) ->
                                            Acc,
                                            [V
                                             || V <- VertexSplitter,
-                                               digraph:out_degree(ConnectedDAG, V) =:= 0])
+                                               is_exit_vertex(ConnectedDAG, V)])
                             end,
-                            maps:from_keys([V
-                                            || V <- digraph:vertices(ConnectedDAG),
-                                               digraph:out_degree(ConnectedDAG, V) =:= 0],
-                                           digraph:vertices(ConnectedDAG)),
-                            Candidates))),
+                            maps:from_keys(exit_vertices(ConnectedDAG),
+                                           [digraph:vertices(ConnectedDAG)]),
+                            Candidates),
+            lists:usort(
+                lists:map(fun lists:sort/1,
+                          my_lists:flatten(
+                              maps:values(MinimumVertexSplittersForEveryExitVertex))))
+        end,
     [S1
      || S1 <- Candidates2,
         not
@@ -72,3 +82,18 @@ solve_in_exp_time_with_correctness(ConnectedDAG) ->
                              sets:from_list(S2), sets:from_list(S1))
                       end,
                       lists:delete(S1, Candidates2))].
+
+%% ===================================================================
+%% Private API
+%% ===================================================================
+-spec compare(term(), term()) -> less | greater | equal.
+compare(X, Y) when X < Y -> less;
+compare(X, Y) when X > Y -> greater;
+compare(_, _) -> equal.
+
+-spec exit_vertices(digraph:graph()) -> [digraph:vertex()].
+exit_vertices(Digraph) ->
+    [V || V <- digraph:vertices(Digraph), is_exit_vertex(Digraph, V)].
+
+-spec is_exit_vertex(digraph:graph(), digraph:vertex()) -> boolean().
+is_exit_vertex(Digraph, Vertex) -> digraph:out_degree(Digraph, Vertex) =:= 0.
