@@ -60,3 +60,17 @@ prop_power2() ->
             ?SUCHTHAT(L, list(random_type()), length(L) =< 15),
             lists:all(fun(List2) -> lists:sort(List2 ++ List -- List2) =:= lists:sort(List) end,
                       my_lists:power(List))).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% my_lists:flatten/1 %%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+% NOTE:
+% It is easy to give a different implementation,
+% so I test by "Wording the specification differently".
+prop_flatten1(doc) -> "Wording the specification differently".
+
+prop_flatten1() ->
+    ?FORALL(ListList,
+            list(list(random_type())),
+            lists:foldl(fun(List, Acc) -> List ++ Acc end, [], lists:reverse(ListList))
+            =:= my_lists:flatten(ListList)).
