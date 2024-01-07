@@ -41,18 +41,30 @@ transform(DAG, TakeAllLocalMinimumVertexSplitters) ->
 transform_(ConnectedDAG, TakeAllLocalMinimumVertexSplitters) ->
     Candidates =
         [begin
-             NextConnectedDAGs =
+             % NOTE: `VertexSplitter` =/= []
+             SubAcacia =
+                 option:get(transform_into_acacia(lists:reverse(sort_by_topological_ordering(VertexSplitter,
+                                                                                             ConnectedDAG)))),
+             SubTrees =
                  begin
                      SubGraph =
                          digraph_utils:subgraph(ConnectedDAG,
                                                 digraph:vertices(ConnectedDAG) -- VertexSplitter),
-                     lists:map(fun(Component) -> digraph_utils:subgraph(SubGraph, Component) end,
-                               digraph_utils:components(SubGraph))
+                     SubConnectedDAGs =
+                         lists:map(fun(Component) -> digraph_utils:subgraph(SubGraph, Component)
+                                   end,
+                                   digraph_utils:components(SubGraph)),
+                     % NOTE: Remove an unneeded supervisor
+                     Fun = fun ({rest_for_one, [V]}) -> V;
+                               (Other) -> Other
+                           end,
+                     [Fun(transform_(SubConnectedDAG, TakeAllLocalMinimumVertexSplitters))
+                      || SubConnectedDAG <- SubConnectedDAGs]
                  end,
-             hd(transform__(lists:reverse(sort_by_topological_ordering(VertexSplitter,
-                                                                       ConnectedDAG)),
-                            NextConnectedDAGs,
-                            TakeAllLocalMinimumVertexSplitters))
+             case SubTrees of
+                 [] -> SubAcacia;
+                 _ -> merge(SubAcacia, {one_for_one, SubTrees})
+             end
          end
          || VertexSplitter <- TakeAllLocalMinimumVertexSplitters(ConnectedDAG)],
     hd(lists:sort(fun(Tree1, Tree2) ->
@@ -60,30 +72,37 @@ transform_(ConnectedDAG, TakeAllLocalMinimumVertexSplitters) ->
                   end,
                   Candidates)).
 
--spec transform__([connected_dag_vertex()],
-                  [connected_dag()],
-                  all_local_minimum_vertex_splitters_solver:take_all_local_minimum_vertex_splitters()) ->
-                     [supervision_tree:t()].
-transform__([], [], _TakeAllLocalMinimumVertexSplitters) -> [];
-transform__([], NextConnectedDAGs, TakeAllLocalMinimumVertexSplitters) ->
-    % NOTE: Remove an unneeded supervisor
-    Fun = fun ({rest_for_one, [V]}) -> V;
-              (Other) -> Other
-          end,
-    [{one_for_one,
-      lists:map(Fun,
-                lists:map(fun(G) -> transform_(G, TakeAllLocalMinimumVertexSplitters) end,
-                          NextConnectedDAGs))}];
-transform__([C | _] = Components, NextDAGs, TakeAllLocalMinimumVertexSplitters)
-    when length(C) =:= 1 ->
-    {Cs1, Cs2} = lists:splitwith(fun(C_) -> length(C_) =:= 1 end, Components),
-    [{rest_for_one,
-      lists:flatten(Cs1) ++ transform__(Cs2, NextDAGs, TakeAllLocalMinimumVertexSplitters)}];
-transform__([C | Components], NextDAGs, TakeAllLocalMinimumVertexSplitters) ->
-    [{one_for_all,
-      C ++ transform__(Components, NextDAGs, TakeAllLocalMinimumVertexSplitters)}].
-
 % NOTE: The argument graph is assumed to be a DAG.
 -spec sort_by_topological_ordering([dag_vertex()], dag()) -> [dag_vertex()].
 sort_by_topological_ordering(Vertices, DAG) ->
     lists:filter(fun(V) -> lists:member(V, Vertices) end, digraph_utils:topsort(DAG)).
+
+% NOTE:
+% Assume the argument is a vertex splitter and
+% is sorted in reverse order of topological sorting.
+-spec transform_into_acacia([connected_dag_vertex()]) -> option:t(supervision_tree:t()).
+transform_into_acacia([]) -> none;
+transform_into_acacia([V | _] = VertexSplitter) when length(V) =:= 1 ->
+    {Vs1, Vs2} = lists:splitwith(fun(C_) -> length(C_) =:= 1 end, VertexSplitter),
+    Children =
+        case transform_into_acacia(Vs2) of
+            {some, Tree} -> lists:flatten(Vs1) ++ [Tree];
+            none -> lists:flatten(Vs1)
+        end,
+    {some, {rest_for_one, Children}};
+transform_into_acacia([V | Vs]) ->
+    Children =
+        case transform_into_acacia(Vs) of
+            {some, Tree} -> V ++ [Tree];
+            none -> V
+        end,
+    {some, {one_for_all, Children}}.
+
+% NOTE: Assume the arguments are standard trees.
+-spec merge(supervision_tree:t(), supervision_tree:t()) -> supervision_tree:t().
+merge({Strategy, Children}, Tree) ->
+    LastChild = lists:last(Children),
+    case supervision_tree:is_tree(LastChild) of
+        true -> {Strategy, lists:droplast(Children) ++ [merge(LastChild, Tree)]};
+        false -> {Strategy, Children ++ [Tree]}
+    end.

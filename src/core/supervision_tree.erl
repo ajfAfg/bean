@@ -1,6 +1,6 @@
 -module(supervision_tree).
 
--export([are_isomorphic/2, calc_cost/1]).
+-export([are_isomorphic/2, calc_cost/1, is_tree/1]).
 
 -export_type([t/0, child/0]).
 
@@ -67,3 +67,7 @@ take_behavior_names(Name) -> Name.
 foldl_with_rest(_Fun, Acc0, []) -> Acc0;
 foldl_with_rest(Fun, Acc0, [Head | Rest]) ->
     foldl_with_rest(Fun, Fun(Head, Acc0, Rest), Rest).
+
+-spec is_tree(t()) -> boolean().
+is_tree({_, _}) -> true;
+is_tree(_) -> false.
