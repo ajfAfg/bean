@@ -14,7 +14,7 @@ prop_solve1(doc) ->
 
 prop_solve1() ->
     ?FORALL(Graph,
-            dependency_graph_generator:dependency_graph(),
+            dependency_graph_generator:dependency_graph(25),
             begin
                 Digraph = dependency_digraph:from_dependency_graph(Graph),
                 lists:all(fun(V) ->
@@ -53,7 +53,7 @@ prop_solve2(doc) -> "About cost, exp time & correct ≤ polynomial time & incorr
 
 prop_solve2() ->
     ?FORALL(Graph,
-            dependency_graph_generator:dependency_graph(),
+            dependency_graph_generator:dependency_graph(18),
             supervision_tree:calc_cost(
                 optimum_supervision_tree_solver:solve(Graph,
                                                       fun all_local_minimum_vertex_splitters_solver:solve_in_exp_time_with_correctness/1))
