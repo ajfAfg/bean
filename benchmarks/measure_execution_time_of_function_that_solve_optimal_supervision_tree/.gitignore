@@ -18,3 +18,8 @@ logs
 *.iml
 rebar3.crashdump
 *~
+
+# NOTE: For the experiment
+*.csv
+*.pdf
+__pycache__
