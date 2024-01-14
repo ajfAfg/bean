@@ -1,14 +1,10 @@
-{application, measure_execution_time_of_function_that_solve_optimal_supervision_tree,
+{application,
+ measure_execution_time_of_function_that_solve_optimal_supervision_tree,
  [{description, "An escript"},
   {vsn, "0.1.0"},
   {registered, []},
-  {applications,
-   [kernel,
-    stdlib
-   ]},
-  {env,[]},
+  {applications, [kernel, stdlib, bean]},
+  {env, []},
   {modules, []},
-
   {licenses, ["Apache-2.0"]},
-  {links, []}
- ]}.
+  {links, []}]}.
