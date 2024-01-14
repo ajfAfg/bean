@@ -1,0 +1,6 @@
+#!/bin/sh
+
+rebar3 escriptize >/dev/null 2>&1
+
+_build/default/bin/measure_execution_time_of_function_that_solve_optimal_supervision_tree \
+    >execution_time_of_function_that_solve_optimal_supervision_tree.csv
