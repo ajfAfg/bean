@@ -17,8 +17,8 @@ for result in results_per_edge:
     plt.rcParams["font.size"] = 22
     plt.scatter(x, y, s=100, c="pink", alpha=0.5, edgecolors="red")
     plt.xticks(list(x), list(map(str, x)))
-    plt.xlabel("The number of gen_server (no)", labelpad=15)
-    plt.ylabel("execution time (s)", labelpad=20)
+    plt.xlabel("gen_server (no)", labelpad=15)
+    plt.ylabel("Execution time (s)", labelpad=20)
     plt.tight_layout()
 
     # Line chart
