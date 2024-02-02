@@ -14,10 +14,10 @@ for result in results_per_edge:
     # Scatter plot
     x = result[:, 0].astype(int)
     y = result[:, 2]
-    plt.rcParams["font.size"] = 22
+    plt.rcParams["font.size"] = 16
     plt.scatter(x, y, s=100, c="pink", alpha=0.5, edgecolors="red")
     plt.xticks(list(x), list(map(str, x)))
-    plt.xlabel("gen_server (no)", labelpad=15)
+    plt.xlabel("# of gen_server", labelpad=15)
     plt.ylabel("Execution time (s)", labelpad=20)
     plt.tight_layout()
 
