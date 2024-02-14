@@ -22,7 +22,7 @@ jobs:
         working-directory: ./demo
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Demonstrate with polynomial_time_without_correctness
         run: |
           mkdir _checkouts
@@ -55,7 +55,7 @@ jobs:
         working-directory: ./demo
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Demonstrate with exp_time_with_correctness
         run: |
           mkdir _checkouts
