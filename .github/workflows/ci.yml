@@ -39,12 +39,17 @@ jobs:
         with:
           otp-version: ${{ env.otp }}
           rebar3-version: ${{ env.rebar3 }}
-      - uses: actions/cache@v4
+      - uses: actions/cache/restore@v4
         with:
-          key: ${{ runner.os }}-otp-${{ env.otp }}-rebar3-${{ env.rebar3 }}-${{ hashFiles('rebar.lock') }}
+          key: dummy-${{ github.sha }}
           path: |
             ~/.cache/rebar3
             _build
+          restore-keys: |
+            ${{ runner.os }}-otp-${{ env.otp }}-rebar3-${{ env.rebar3 }}-${{ hashFiles('rebar.lock') }}
+
+      - run: ls _build/default
+      - run: ls ~/.cache/rebar3
       - run: rebar3 xref
       - run: rebar3 dialyzer
 
@@ -59,12 +64,15 @@ jobs:
         with:
           otp-version: ${{ env.otp }}
           rebar3-version: ${{ env.rebar3 }}
-      - uses: actions/cache@v4
+      - uses: actions/cache/restore@v4
         with:
-          key: ${{ runner.os }}-otp-${{ env.otp }}-rebar3-${{ env.rebar3 }}-${{ hashFiles('rebar.lock') }}
+          key: dummy-${{ github.sha }}
           path: |
             ~/.cache/rebar3
             _build
+          restore-keys: |
+            ${{ runner.os }}-otp-${{ env.otp }}-rebar3-${{ env.rebar3 }}-${{ hashFiles('rebar.lock') }}
+
       - name: Run sample-based-tests
         run: rebar3 do eunit, ct
       - name: Run property-based-tests

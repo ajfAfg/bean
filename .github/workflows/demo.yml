@@ -29,10 +29,11 @@ jobs:
           rebar3-version: ${{ env.rebar3 }}
       - uses: actions/cache@v4
         with:
-          key: ${{ runner.os }}-otp-${{ env.otp }}-rebar3-${{ env.rebar3 }}-${{ hashFiles('rebar.lock') }}
+          key: ${{ runner.os }}-otp-${{ env.otp }}-rebar3-${{ env.rebar3 }}-${{ hashFiles('./demo/rebar.lock') }}
           path: |
             ~/.cache/rebar3
             _build
+
       - name: Demonstrate with polynomial_time_without_correctness
         run: |
           mkdir _checkouts
@@ -68,10 +69,11 @@ jobs:
           rebar3-version: ${{ env.rebar3 }}
       - uses: actions/cache@v4
         with:
-          key: ${{ runner.os }}-otp-${{ env.otp }}-rebar3-${{ env.rebar3 }}-${{ hashFiles('rebar.lock') }}
+          key: ${{ runner.os }}-otp-${{ env.otp }}-rebar3-${{ env.rebar3 }}-${{ hashFiles('./demo/rebar.lock') }}
           path: |
             ~/.cache/rebar3
             _build
+
       - name: Demonstrate with exp_time_with_correctness
         run: |
           mkdir _checkouts
