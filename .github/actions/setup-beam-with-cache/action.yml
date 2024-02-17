@@ -1,0 +1,55 @@
+name: Setup beam with Rebar3 cache
+description: Action that combines `erlef/setup-beam@v1` and `action/cache@v4`
+
+inputs:
+  otp-version:
+    description: Erlang/OTP version (string)
+    required: true
+  rebar3-version:
+    description: Rebar3 version (string)
+    required: true
+  rebar-lock-path:
+    description: Path of `rebar.lock` (string)
+    required: true
+  overwrite:
+    description: Whether to overwrite the cache (bool string)
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - uses: erlef/setup-beam@v1
+      with:
+        otp-version: ${{ inputs.otp-version }}
+        rebar3-version: ${{ inputs.rebar3-version }}
+
+    - uses: actions/cache@v4
+      id: cache-no-overwrite
+      if: ${{ inputs.overwrite != 'true' }}
+      with:
+        key: ${{ runner.os }}-otp-${{ inputs.otp-version }}-rebar3-${{ inputs.rebar3-version }}-${{ hashFiles(inputs.rebar-lock-path) }}
+        path: |
+          ~/.cache/rebar3
+          _build
+        restore-keys: |
+          ${{ runner.os }}-otp-${{ env.otp }}-rebar3-${{ env.rebar3 }}-${{ hashFiles('rebar.lock') }}-
+
+    - uses: actions/cache@v4
+      if: ${{ inputs.overwrite == 'true' }}
+      with:
+        # NOTE: No duplicate key to overwrite the cache.
+        key: ${{ runner.os }}-otp-${{ env.otp }}-rebar3-${{ env.rebar3 }}-${{ hashFiles('rebar.lock') }}-${{ github.run_id }}-${{ github.run_attempt }}
+        path: |
+          ~/.cache/rebar3
+          _build
+        restore-keys: |
+          ${{ runner.os }}-otp-${{ env.otp }}-rebar3-${{ env.rebar3 }}-${{ hashFiles('rebar.lock') }}
+
+    - name: Create cache data
+      shell: bash
+      if: ${{ steps.cache-no-overwrite.outputs.cache-hit != 'true' }}
+      run: |
+        rebar3 compile
+        rebar3 as test compile
+        rebar3 dialyzer

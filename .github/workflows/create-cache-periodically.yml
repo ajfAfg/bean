@@ -1,0 +1,34 @@
+# NOTE:
+# Workflow for creating a cache periodically.
+# Eliminating the period during which the cache is invalid
+# prevents the increase in execution time due to the absence of the cache.
+name: Create cache periodically
+
+on:
+  schedule:
+    # NOTE:
+    # The validity period of the cache is virtually unlimited.
+    # Originally, a cache is valid for 7 days
+    # (c.f. https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows#usage-limits-and-eviction-policy),
+    # but if a new cache is created before the cache becomes invalid,
+    # the validity period can be extended for another 7 days.
+    - cron: "0 0 */6 * *"
+
+  workflow_dispatch:
+
+env:
+  otp: 26.0
+  rebar3: 3.22.1
+
+jobs:
+  overwrite-cache:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-beam-with-cache/
+        with:
+          otp-version: ${{ env.otp }}
+          rebar3-version: ${{ env.rebar3 }}
+          rebar-lock-path: "./rebar.lock"
+          overwrite: "true"

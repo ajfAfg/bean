@@ -1,0 +1,63 @@
+name: Erlang CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    types: ["opened", "synchronize", "reopened"]
+
+permissions:
+  contents: read
+
+env:
+  otp: 26.0
+  rebar3: 3.22.1
+
+jobs:
+  #============================================================================
+  # Build
+  build:
+    runs-on: ubuntu-22.04
+
+    # NOTE: To check if the first build is possible, do not use the cache.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: ${{ env.otp }}
+          rebar3-version: ${{ env.rebar3 }}
+      - run: rebar3 compile
+
+  #============================================================================
+  # Static Analysis
+  static_analysis:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-beam-with-cache/
+        with:
+          otp-version: ${{ env.otp }}
+          rebar3-version: ${{ env.rebar3 }}
+          rebar-lock-path: "./rebar.lock"
+
+      - run: rebar3 xref
+      - run: rebar3 dialyzer
+
+  #============================================================================
+  # Test
+  test:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-beam-with-cache/
+        with:
+          otp-version: ${{ env.otp }}
+          rebar3-version: ${{ env.rebar3 }}
+          rebar-lock-path: "./rebar.lock"
+
+      - name: Run sample-based-tests
+        run: rebar3 do eunit, ct
+      - name: Run property-based-tests
+        run: rebar3 proper -n 500

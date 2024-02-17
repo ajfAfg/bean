@@ -5,14 +5,21 @@ on:
     # NOTE: Every day at 00:00 (JST)
     - cron: "0 15 * * *"
 
+env:
+  otp: 26.0
+  rebar3: 3.22.1
+
 jobs:
   test:
     runs-on: ubuntu-22.04
 
-    container:
-      image: erlang:26.2.1
-
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-beam-with-cache/
+        with:
+          otp-version: ${{ env.otp }}
+          rebar3-version: ${{ env.rebar3 }}
+          rebar-lock-path: "./rebar.lock"
+
       - name: Run property-based tests
         run: rebar3 proper -n 1000
