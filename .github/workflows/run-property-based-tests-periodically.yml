@@ -21,12 +21,12 @@ jobs:
           rebar3-version: ${{ env.rebar3 }}
       - uses: actions/cache/restore@v4
         with:
-          key: dummy-${{ github.sha }}
+          key: ${{ runner.os }}-otp-${{ env.otp }}-rebar3-${{ env.rebar3 }}-${{ hashFiles('rebar.lock') }}
           path: |
             ~/.cache/rebar3
             _build
           restore-keys: |
-            ${{ runner.os }}-otp-${{ env.otp }}-rebar3-${{ env.rebar3 }}-${{ hashFiles('rebar.lock') }}
+            ${{ runner.os }}-otp-${{ env.otp }}-rebar3-${{ env.rebar3 }}-${{ hashFiles('rebar.lock') }}-
 
       - name: Run property-based tests
         run: rebar3 proper -n 1000

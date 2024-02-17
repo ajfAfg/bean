@@ -41,12 +41,12 @@ jobs:
           rebar3-version: ${{ env.rebar3 }}
       - uses: actions/cache/restore@v4
         with:
-          key: dummy-${{ github.sha }}
+          key: ${{ runner.os }}-otp-${{ env.otp }}-rebar3-${{ env.rebar3 }}-${{ hashFiles('rebar.lock') }}
           path: |
             ~/.cache/rebar3
             _build
           restore-keys: |
-            ${{ runner.os }}-otp-${{ env.otp }}-rebar3-${{ env.rebar3 }}-${{ hashFiles('rebar.lock') }}
+            ${{ runner.os }}-otp-${{ env.otp }}-rebar3-${{ env.rebar3 }}-${{ hashFiles('rebar.lock') }}-
 
       - run: ls _build/default
       - run: ls ~/.cache/rebar3
@@ -66,12 +66,12 @@ jobs:
           rebar3-version: ${{ env.rebar3 }}
       - uses: actions/cache/restore@v4
         with:
-          key: dummy-${{ github.sha }}
+          key: ${{ runner.os }}-otp-${{ env.otp }}-rebar3-${{ env.rebar3 }}-${{ hashFiles('rebar.lock') }}
           path: |
             ~/.cache/rebar3
             _build
           restore-keys: |
-            ${{ runner.os }}-otp-${{ env.otp }}-rebar3-${{ env.rebar3 }}-${{ hashFiles('rebar.lock') }}
+            ${{ runner.os }}-otp-${{ env.otp }}-rebar3-${{ env.rebar3 }}-${{ hashFiles('rebar.lock') }}-
 
       - name: Run sample-based-tests
         run: rebar3 do eunit, ct
