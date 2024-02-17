@@ -1,10 +1,7 @@
 # NOTE:
-# Workflow for creating a cache.
-# Currently, all jobs can share the cache,
-# but the data to be cached is not necessarily created by all jobs (e.g. plt files).
-# For this reason, this workflow is used to create the cache in batches.
-# Another advantage of this method is that
-# the absence of a cache does not cause jobs to take longer to run.
+# Workflow for creating a cache periodically.
+# Eliminating the period during which the cache is invalid
+# prevents the increase in execution time due to the absence of the cache.
 name: Create cache periodically
 
 on:
@@ -24,7 +21,7 @@ env:
   rebar3: 3.22.1
 
 jobs:
-  create-cache:
+  overwrite-cache:
     runs-on: ubuntu-22.04
 
     steps:
