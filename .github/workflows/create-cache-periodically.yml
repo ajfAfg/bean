@@ -30,5 +30,4 @@ jobs:
         with:
           otp-version: ${{ env.otp }}
           rebar3-version: ${{ env.rebar3 }}
-          rebar-lock-path: "./rebar.lock"
           overwrite: "true"
