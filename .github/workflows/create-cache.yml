@@ -7,23 +7,11 @@
 # the absence of a cache does not cause jobs to take longer to run.
 name: Create cache
 
-# dummy comment
-
 on:
-  schedule:
-    # NOTE:
-    # The validity period of the cache is virtually unlimited.
-    # Originally, a cache is valid for 7 days
-    # (c.f. https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows#usage-limits-and-eviction-policy),
-    # but if a new cache is created before the cache becomes invalid,
-    # the validity period can be extended for another 7 days.
-    - cron: "0 0 */6 * *"
-
   push:
     branches: ["main"]
   pull_request:
     types: ["opened", "synchronize", "reopened"]
-  workflow_dispatch:
 
 env:
   otp: 26.0
@@ -35,36 +23,22 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - uses: erlef/setup-beam@v1
+      - uses: actions/cache@v4
+        id: cache
         with:
-          otp-version: ${{ env.otp }}
-          rebar3-version: ${{ env.rebar3 }}
-      - uses: actions/cache/restore@v4
-        id: cache-restore
-        with:
-          key: ${{ runner.os }}-otp-${{ env.otp }}-rebar3-${{ env.rebar3 }}-${{ hashFiles('rebar.lock') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: ${{ runner.os }}-otp-${{ env.otp }}-rebar3-${{ env.rebar3 }}-${{ hashFiles('rebar.lock') }}
           path: |
             ~/.cache/rebar3
             _build
-          restore-keys: |
-            ${{ runner.os }}-otp-${{ env.otp }}-rebar3-${{ env.rebar3 }}-${{ hashFiles('rebar.lock') }}
 
-      # NOTE:
-      # We always execute the following commands,
-      # as the presence of a cache will drastically reduce execution time.
-      # The above cache will always match the keys in `restore-keys`,
-      # so one of the outputs of the Restore action, `cache-hit`, will always be `false`,
-      # and the cost of conditional branching due to the presence of the cache will be high.
+      - uses: erlef/setup-beam@v1
+        if: ${{ steps.cache.outputs.cache-hit != 'true' }}
+        with:
+          otp-version: ${{ env.otp }}
+          rebar3-version: ${{ env.rebar3 }}
       - name: Create cache data
+        if: ${{ steps.cache.outputs.cache-hit != 'true' }}
         run: |
           rebar3 compile
           rebar3 as test compile
           rebar3 dialyzer
-
-      - uses: actions/cache/save@v4
-        if: always()
-        with:
-          key: ${{ steps.cache-restore.outputs.cache-primary-key }}
-          path: |
-            ~/.cache/rebar3
-            _build

@@ -1,0 +1,50 @@
+# NOTE:
+# Workflow for creating a cache.
+# Currently, all jobs can share the cache,
+# but the data to be cached is not necessarily created by all jobs (e.g. plt files).
+# For this reason, this workflow is used to create the cache in batches.
+# Another advantage of this method is that
+# the absence of a cache does not cause jobs to take longer to run.
+name: Create cache periodically
+
+on:
+  schedule:
+    # NOTE:
+    # The validity period of the cache is virtually unlimited.
+    # Originally, a cache is valid for 7 days
+    # (c.f. https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows#usage-limits-and-eviction-policy),
+    # but if a new cache is created before the cache becomes invalid,
+    # the validity period can be extended for another 7 days.
+    - cron: "0 0 */6 * *"
+
+  workflow_dispatch:
+
+env:
+  otp: 26.0
+  rebar3: 3.22.1
+
+jobs:
+  create-cache:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: ${{ env.otp }}
+          rebar3-version: ${{ env.rebar3 }}
+      - uses: actions/cache@v4
+        with:
+          # NOTE: No duplicate key to overwrite the cache.
+          key: ${{ runner.os }}-otp-${{ env.otp }}-rebar3-${{ env.rebar3 }}-${{ hashFiles('rebar.lock') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ~/.cache/rebar3
+            _build
+          restore-keys: |
+            ${{ runner.os }}-otp-${{ env.otp }}-rebar3-${{ env.rebar3 }}-${{ hashFiles('rebar.lock') }}
+
+      - name: Create cache data
+        run: |
+          rebar3 compile
+          rebar3 as test compile
+          rebar3 dialyzer
