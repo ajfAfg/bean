@@ -25,7 +25,7 @@ runs:
         rebar3-version: ${{ inputs.rebar3-version }}
 
     - uses: actions/cache@v4
-      id: cache
+      id: cache-no-overwrite
       if: ${{ inputs.overwrite != 'true' }}
       with:
         key: ${{ runner.os }}-otp-${{ inputs.otp-version }}-rebar3-${{ inputs.rebar3-version }}-${{ hashFiles(inputs.rebar-lock-path) }}
@@ -48,7 +48,7 @@ runs:
 
     - name: Create cache data
       shell: bash
-      if: ${{ steps.cache.outputs.cache-hit != 'true' }}
+      if: ${{ steps.cache-no-overwrite.outputs.cache-hit != 'true' }}
       run: |
         rebar3 compile
         rebar3 as test compile

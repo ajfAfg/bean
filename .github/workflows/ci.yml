@@ -41,8 +41,6 @@ jobs:
           rebar3-version: ${{ env.rebar3 }}
           rebar-lock-path: "./rebar.lock"
 
-      - run: ls _build/default
-      - run: ls ~/.cache/rebar3
       - run: rebar3 xref
       - run: rebar3 dialyzer
 
