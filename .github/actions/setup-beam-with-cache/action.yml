@@ -8,9 +8,6 @@ inputs:
   rebar3-version:
     description: Rebar3 version (string)
     required: true
-  rebar-lock-path:
-    description: Path of `rebar.lock` (string)
-    required: true
   overwrite:
     description: Whether to overwrite the cache (bool string)
     required: false
@@ -28,7 +25,7 @@ runs:
       id: cache-no-overwrite
       if: ${{ inputs.overwrite != 'true' }}
       with:
-        key: ${{ runner.os }}-otp-${{ inputs.otp-version }}-rebar3-${{ inputs.rebar3-version }}-${{ hashFiles(inputs.rebar-lock-path) }}
+        key: ${{ runner.os }}-otp-${{ inputs.otp-version }}-rebar3-${{ inputs.rebar3-version }}-${{ hashFiles('rebar.lock') }}
         path: |
           ~/.cache/rebar3
           _build

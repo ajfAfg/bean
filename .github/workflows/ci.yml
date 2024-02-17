@@ -39,7 +39,6 @@ jobs:
         with:
           otp-version: ${{ env.otp }}
           rebar3-version: ${{ env.rebar3 }}
-          rebar-lock-path: "./rebar.lock"
 
       - run: rebar3 xref
       - run: rebar3 dialyzer
@@ -55,7 +54,6 @@ jobs:
         with:
           otp-version: ${{ env.otp }}
           rebar3-version: ${{ env.rebar3 }}
-          rebar-lock-path: "./rebar.lock"
 
       - name: Run sample-based-tests
         run: rebar3 do eunit, ct
