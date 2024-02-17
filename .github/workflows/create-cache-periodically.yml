@@ -29,22 +29,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - uses: erlef/setup-beam@v1
+      - uses: ./.github/actions/setup-beam-with-cache/
         with:
           otp-version: ${{ env.otp }}
           rebar3-version: ${{ env.rebar3 }}
-      - uses: actions/cache@v4
-        with:
-          # NOTE: No duplicate key to overwrite the cache.
-          key: ${{ runner.os }}-otp-${{ env.otp }}-rebar3-${{ env.rebar3 }}-${{ hashFiles('rebar.lock') }}-${{ github.run_id }}-${{ github.run_attempt }}
-          path: |
-            ~/.cache/rebar3
-            _build
-          restore-keys: |
-            ${{ runner.os }}-otp-${{ env.otp }}-rebar3-${{ env.rebar3 }}-${{ hashFiles('rebar.lock') }}
-
-      - name: Create cache data
-        run: |
-          rebar3 compile
-          rebar3 as test compile
-          rebar3 dialyzer
+          rebar-lock-path: "./rebar.lock"
+          overwrite: "true"
