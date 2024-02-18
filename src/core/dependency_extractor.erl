@@ -17,7 +17,7 @@ extract(CModules) ->
     G = extract_(CModules),
     case map_size(G) =:= 0 of
         true -> none;
-        false -> {some, G}
+        false -> {some, inverse_dependencies(G)}
     end.
 
 -spec extract_([cerl:c_module()]) -> #{behavior:name() => [behavior:name()]}.
@@ -130,3 +130,16 @@ extract_from_fun_body({c_values, _, _}, Acc) ->
 extract_from_fun_body({c_var, _, _}, Acc) ->
     Acc; % TODO: Support
 extract_from_fun_body(_, Acc) -> Acc.
+
+-spec inverse_dependencies(#{behavior:name() => [behavior:name()]}) ->
+                              #{behavior:name() => [behavior:name()]}.
+inverse_dependencies(Dependencies) ->
+    maps:fold(fun(Key, Value, NewDependencies) ->
+                 lists:foldl(fun(E, Acc) -> maps:update_with(E, fun(List) -> [Key | List] end, Acc)
+                             end,
+                             NewDependencies,
+                             Value)
+              end,
+              maps:from_keys(
+                  maps:keys(Dependencies), []),
+              Dependencies).
