@@ -27,25 +27,11 @@ init(State) ->
 
 -spec do(rebar_state:t()) -> {ok, rebar_state:t()} | {error, string()}.
 do(State) ->
-    {Args, _} = rebar_state:command_parsed_args(State),
-    FunOpt =
-        case proplists:get_value(algorithm, Args, polynomial_time_without_correctness) of
-            polynomial_time_without_correctness ->
-                {some,
-                 fun all_local_minimum_vertex_splitters_solver:solve_in_polynomial_time_without_correctness/1};
-            exp_time_with_correctness ->
-                {some,
-                 fun all_local_minimum_vertex_splitters_solver:solve_in_exp_time_with_correctness/1};
-            _ -> none
-        end,
-    case FunOpt of
-        {some, TakeAllLocalMinimumVertexSplitters} ->
-            lists:foreach(fun(App) -> generate_supervisor(App, TakeAllLocalMinimumVertexSplitters)
-                          end,
-                          rebar_state:project_apps(State)),
-            {ok, State};
-        none -> {error, "Invalid algorithm"}
-    end.
+    lists:foreach(fun(App) ->
+                     generate_supervisor(App,
+                                         fun all_local_minimum_vertex_splitters_solver:solve_in_polynomial_time_without_correctness/1)
+                  end,
+                  rebar_state:project_apps(State)).
 
 -spec format_error(any()) -> iolist().
 format_error(Reason) -> io_lib:format("~p", [Reason]).
