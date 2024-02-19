@@ -30,7 +30,8 @@ do(State) ->
                      generate_supervisor(App,
                                          fun all_local_minimum_vertex_splitters_solver:solve_in_polynomial_time_without_correctness/1)
                   end,
-                  rebar_state:project_apps(State)).
+                  rebar_state:project_apps(State)),
+    {ok, State}.
 
 -spec format_error(any()) -> iolist().
 format_error(Reason) -> io_lib:format("~p", [Reason]).
