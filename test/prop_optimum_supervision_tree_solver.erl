@@ -49,7 +49,7 @@ take_restart_processes({_, Children}) ->
         lists:map(fun take_restart_processes/1, Children));
 take_restart_processes(Child) -> Child.
 
-prop_solve2(doc) -> "About cost, exp time & correct ≤ polynomial time & incorrect".
+prop_solve2(doc) -> "About cost, exp time & correct = polynomial time & incorrect".
 
 prop_solve2() ->
     ?FORALL(Graph,
@@ -57,6 +57,6 @@ prop_solve2() ->
             supervision_tree:calc_cost(
                 optimum_supervision_tree_solver:solve(Graph,
                                                       fun all_local_minimum_vertex_splitters_solver:solve_in_exp_time_with_correctness/1))
-            =< supervision_tree:calc_cost(
-                   optimum_supervision_tree_solver:solve(Graph,
-                                                         fun all_local_minimum_vertex_splitters_solver:solve_in_polynomial_time_without_correctness/1))).
+            =:= supervision_tree:calc_cost(
+                    optimum_supervision_tree_solver:solve(Graph,
+                                                          fun all_local_minimum_vertex_splitters_solver:solve_in_polynomial_time_without_correctness/1))).
