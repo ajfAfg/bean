@@ -14,7 +14,7 @@ env:
   rebar3: 3.22.1
 
 jobs:
-  demo_with_polynomial_time_without_correctness:
+  demo:
     runs-on: ubuntu-22.04
 
     defaults:
@@ -28,45 +28,11 @@ jobs:
           otp-version: ${{ env.otp }}
           rebar3-version: ${{ env.rebar3 }}
 
-      - name: Demonstrate with polynomial_time_without_correctness
+      - name: Demonstrate
         run: |
           mkdir _checkouts
           ln -s ${PWD}/../ _checkouts/bean
           rebar3 bean
-          # NOTE:
-          # The processing of the following three commands can be achieved
-          # in some environments with the command
-          # `[ $(rebar3 shell --script run.escript | grep 'Result: 55' | wc -l) -eq 2 ]` alone.
-          # However, when the command are executed in GitHub Actions,
-          # the evaluation of `supervisor:start_link(bean, [])` causes a "Terminating erlang" error.
-          # The cause of this problem seems to depend on
-          # whether or not the Erlang runtime system is started with a shell
-          # (i.e., with or without `-noshell` at startup).
-          # Unfortunately, this option is currently not supported by Rebar3,
-          # so I used `erl` directly to solve this problem.
-          rebar3 compile
-          erlc run.erl
-          [ $(erl -pa _build/default/lib/demo/ebin -run run main -noshell | grep 'Result: 55' | wc -l) -eq 2 ]
-
-  demo_with_exp_time_with_correctness:
-    runs-on: ubuntu-22.04
-
-    defaults:
-      run:
-        working-directory: ./demo
-
-    steps:
-      - uses: actions/checkout@v4
-      - uses: erlef/setup-beam@v1
-        with:
-          otp-version: ${{ env.otp }}
-          rebar3-version: ${{ env.rebar3 }}
-
-      - name: Demonstrate with exp_time_with_correctness
-        run: |
-          mkdir _checkouts
-          ln -s ${PWD}/../ _checkouts/bean
-          rebar3 bean --algorithm exp_time_with_correctness
           # NOTE:
           # The processing of the following three commands can be achieved
           # in some environments with the command
