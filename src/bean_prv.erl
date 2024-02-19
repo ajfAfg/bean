@@ -19,8 +19,7 @@ init(State) ->
                            true},                 % The task can be run by the user, always true
                           {deps, ?DEPS},                % The list of dependencies
                           {example, "rebar3 bean"}, % How to use the plugin
-                          {opts,
-                           bean_opts()},                   % list of options understood by the plugin
+                          {opts, []},                   % list of options understood by the plugin
                           {short_desc, "A rebar plugin"},
                           {desc, "A rebar plugin"}]),
     {ok, rebar_state:add_provider(State, Provider)}.
@@ -84,12 +83,3 @@ generate_supervisor(_App, TakeAllLocalMinimumVertexSplitters) ->
 
 find_source_files(Dir) ->
     filelib:fold_files(Dir, ".*\.erl", true, fun(X, Acc) -> [X | Acc] end, []).
-
-bean_opts() ->
-    [{algorithm,
-      $a,
-      "algorithm",
-      atom,
-      "Algorithm used to generate a supervision tree. "
-      "Choice of `polynomial_time_without_correctness` and `exp_time_with_correctness`. "
-      "[default: polynomial_time_without_correctness]"}].
