@@ -52,9 +52,7 @@ make_name() ->
 -spec create_child_spec(supervision_tree:child(), sup_names()) -> supervisor:child_spec().
 create_child_spec(Name, _) when is_atom(Name) ->
     #{id => Name,
-      start =>
-          % TODO: Give the debug information only when running the benchmark to measure the time to restart gen_servers
-          {gen_server, start_link, [{local, Name}, Name, [], [{debug, [statistics]}]]},
+      start => {gen_server, start_link, [{local, Name}, Name, [], []]},
       type => worker};
 create_child_spec(Child, Names) ->
     Name = maps:get(Child, Names),
