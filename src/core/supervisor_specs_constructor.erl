@@ -20,9 +20,8 @@ convert_sup_specs_from_grouped_dependencies({Strategy, Children} = SupervisionTr
         #{name => maps:get(SupervisionTree, Names),
           sup_flags =>
               #{strategy => Strategy,
-                % TODO: Give the debug information only when running the benchmark to measure the time to restart gen_servers
-                intensity => 1000,
-                period => 1},
+                intensity => 1,
+                period => 5},
           child_specs => lists:map(fun(Child) -> create_child_spec(Child, Names) end, Children)},
     lists:foldl(fun(Child, A) -> convert_sup_specs_from_grouped_dependencies(Child, Names, A)
                 end,
@@ -52,9 +51,7 @@ make_name() ->
 -spec create_child_spec(supervision_tree:child(), sup_names()) -> supervisor:child_spec().
 create_child_spec(Name, _) when is_atom(Name) ->
     #{id => Name,
-      start =>
-          % TODO: Give the debug information only when running the benchmark to measure the time to restart gen_servers
-          {gen_server, start_link, [{local, Name}, Name, [], [{debug, [statistics]}]]},
+      start => {gen_server, start_link, [{local, Name}, Name, [], []]},
       type => worker};
 create_child_spec(Child, Names) ->
     Name = maps:get(Child, Names),
